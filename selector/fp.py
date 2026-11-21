@@ -112,21 +112,54 @@ def all_modules(root):
     return mods
 
 
-def fingerprint(root, modules):
+def fingerprint(root, modules, key_order=None):
+    """Hash `modules`. Class keys are assigned by walking `key_order` (all
+    modules, fixed order) first, so they never depend on which subset we hash."""
     out = {}
     failed = []
-    loaded = []
-    for name in modules:
-        try:
-            loaded.append(importlib.import_module(name))
-        except BaseException as e:  # noqa: BLE001
-            failed.append(name)
+
+    def load(names):
+        res = []
+        for name in names:
+            try:
+                res.append(importlib.import_module(name))
+            except BaseException:  # noqa: BLE001
+                failed.append(name)
+        return res
+
+    loaded = load(modules)
+    keys = {}
+    used_keys = {}
+
+    def assign(cls, path_key):
+        if id(cls) in keys:
+            return
+        key = f"{cls.__module__}:{cls.__qualname__}#{len(cls.__mro__)}"
+        if used_keys.setdefault(key, id(cls)) != id(cls):
+            key = path_key  # a second class with the same name (built dynamically)
+        keys[id(cls)] = key
+        for attr, val in list(cls.__dict__.items()):
+            if isinstance(val, type) and str(getattr(val, "__module__", "")).startswith("sqlglot"):
+                assign(val, f"{key}.{attr}")
+
+    def walk_modules(mods, fn):
+        for m in mods:
+            for gname, val in list(vars(m).items()):
+                if isinstance(val, type) and val.__module__ == m.__name__:
+                    fn(val, f"{m.__name__}:{gname}")
+
+    order = [sys.modules[n] for n in (key_order or []) if n in sys.modules] or loaded
+    walk_modules(order, assign)
+    walk_modules(loaded, assign)
+
     seen_cls = set()
 
-    def do_class(cls, key):
+    def do_class(cls, path_key):
         if id(cls) in seen_cls:
             return
         seen_cls.add(id(cls))
+        assign(cls, path_key)
+        key = keys[id(cls)]
         cname = f"{cls.__module__}.{cls.__qualname__}"
         for attr, val in list(cls.__dict__.items()):
             if attr in ("__dict__", "__weakref__", "__module__", "__doc__", "__annotations__",
@@ -158,8 +191,16 @@ def main():
     outp = sys.argv[1]
     root = os.getcwd()
     sys.path.insert(0, root)
-    mods = sys.argv[2:] or all_modules(root)
-    fp, failed = fingerprint(root, mods)
+    allm = all_modules(root)
+    failed_all = []
+    for name in allm:  # same import state as the baseline, whatever we hash
+        try:
+            importlib.import_module(name)
+        except BaseException:  # noqa: BLE001
+            failed_all.append(name)
+    mods = sys.argv[2:] or allm
+    fp, failed = fingerprint(root, mods, key_order=allm)
+    failed = sorted(set(failed) | set(failed_all))
     with open(outp, "w") as f:
         json.dump({"fp": fp, "failed": failed}, f)
 

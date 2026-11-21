@@ -213,18 +213,82 @@ def source_lines_with(tokens):
     return out
 
 
+_IMPORTERS = [None]
+
+
+def _modname(rel):
+    m = rel[:-3].replace("/", ".")
+    return m[: -len(".__init__")] if m.endswith(".__init__") else m
+
+
+def affected_modules(paths):
+    """Changed modules plus every sqlglot module that imports them, transitively
+    (static imports anywhere in the file, relative ones resolved)."""
+    import ast as _ast
+    if _IMPORTERS[0] is None:
+        imp = {}
+        base = SRC / "sqlglot"
+        for d, dirs, files in os.walk(base):
+            dirs[:] = [x for x in dirs if x != "__pycache__"]
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
+                p = Path(d) / f
+                rel = str(p.relative_to(SRC))
+                me = _modname(rel)
+                pkg = me if f == "__init__.py" else me.rsplit(".", 1)[0]
+                try:
+                    tree = _ast.parse(p.read_text(encoding="utf-8"))
+                except SyntaxError:
+                    continue
+                for n in _ast.walk(tree):
+                    targets = []
+                    if isinstance(n, _ast.Import):
+                        targets = [a.name for a in n.names]
+                    elif isinstance(n, _ast.ImportFrom):
+                        if n.level:
+                            parts = pkg.split(".")
+                            parts = parts[: len(parts) - (n.level - 1)]
+                            root = ".".join(parts + ([n.module] if n.module else []))
+                        else:
+                            root = n.module or ""
+                        targets = [root] + [root + "." + a.name for a in n.names]
+                    for t in targets:
+                        if t.startswith("sqlglot"):
+                            # importing a.b.c also runs a and a.b
+                            parts = t.split(".")
+                            for i in range(1, len(parts) + 1):
+                                imp.setdefault(".".join(parts[:i]), set()).add(me)
+                # importing a submodule imports its parent packages
+                parts = me.split(".")
+                for i in range(1, len(parts)):
+                    imp.setdefault(".".join(parts[:i]), set()).add(me)
+        _IMPORTERS[0] = imp
+    imp = _IMPORTERS[0]
+    todo = [_modname(p) for p in paths]
+    seen = set(todo)
+    while todo:
+        m = todo.pop()
+        for x in imp.get(m, ()):
+            if x not in seen:
+                seen.add(x)
+                todo.append(x)
+    return sorted(seen)
+
+
 def fingerprint_select(ctx, text, cid):
     """Class/module-level edits: diff the patched import-time state against the
     baseline and select tests that use any changed class or name."""
     M = ctx.map
     base = _fp_base()
     files = patched_files(text)
+    mods = affected_modules(ctx.need_fp)
     ov = verify.build_overlay(SRC, "/tmp/ov", files)
     outp = "/tmp/fp_out.json"
     try:
         env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1")
         import subprocess
-        r = subprocess.run([sys.executable, str(HERE / "fp.py"), outp], cwd=str(ov), env=env,
+        r = subprocess.run([sys.executable, str(HERE / "fp.py"), outp] + mods, cwd=str(ov), env=env,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
         if r.returncode != 0:
             return ALL
@@ -238,7 +302,14 @@ def fingerprint_select(ctx, text, cid):
         rel = mod.replace(".", "/")
         for cand in (rel + ".py", rel + "/__init__.py"):
             bits |= M.file_any(cand)
-    bfp, nfp = base["fp"], new["fp"]
+    modset = set(mods)
+    full = base["fp"]
+    nfp = new["fp"]
+    # keys the subset run should have produced, plus anything it did produce
+    bfp = {k: v for k, v in full.items() if k.split(":", 1)[0] in modset}
+    for k in nfp:
+        if k in full:
+            bfp[k] = full[k]
     by_owner = {}
     glob_tokens = set()
     for k in set(bfp) | set(nfp):
@@ -298,9 +369,9 @@ def patched_files(text):
     return out
 
 
-VERIFY_MAX_TEST = float(os.environ.get("BR_VMAX", "3.0"))
-VERIFY_BUDGET = float(os.environ.get("BR_VBUDGET", "10.0"))
-VERIFY = os.environ.get("BR_VERIFY", "0") == "1"
+VERIFY_MAX_TEST = float(os.environ.get("BR_VMAX", "0.5"))
+VERIFY_BUDGET = float(os.environ.get("BR_VBUDGET", "1.0"))
+VERIFY = os.environ.get("BR_VERIFY", "1") == "1"
 
 
 def cost_ms(workers, dur):
@@ -316,11 +387,13 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     heavy = set(sel) - set(light)
     before = cost_ms(pack(sel, dur), dur)
     best_after = cost_ms(pack(heavy, dur), dur)
-    est_cpu = 400 + 1.3 * sum(dur[n] for n in light)  # import + run
+    if any(not (fp.new or "").endswith(".py") for fp in difflib2.parse(text)):
+        return sel  # data/fixture edits nearly always break their readers
+    est_cpu = 350 + 1.3 * sum(dur[n] for n in light)  # interpreter + imports + run
     if before - best_after < est_cpu:
         return sel
     files = patched_files(text)
-    ov = verify.build_overlay(SRC, f"/tmp/ov_{cid}", files)
+    ov = verify.build_overlay(SRC, "/tmp/ov", files)
     try:
         t = {x["number"]: x for x in ctx.tests}
         req = [(n, t[n]["id"], t[n]["seconds"]) for n in light]
