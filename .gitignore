@@ -1,0 +1,6 @@
+map_raw/
+map_raw_v1/
+maps/fp_base.json
+sample_labels.json
+__pycache__/
+*.pyc
