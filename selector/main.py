@@ -133,11 +133,19 @@ def select_file(ctx, fp):
     if path.endswith(".py") and COARSE and ctx.map is not None:
         return rules.bits_to_set(ctx.map.file_any(path) | ctx.map.always)
     if path.endswith(".py"):
-        if ast_equal(old, new):
+        try:
+            ot = ast.parse(old)
+        except SyntaxError:
+            return ALL
+        try:
+            nt = ast.parse(new)
+        except SyntaxError:
+            nt = None
+        if nt is not None and rules.same_tree(ot, nt):
             return set()  # comment / whitespace only (docstrings are AST)
         if ctx.map is None:
             return ALL
-        b = rules.select_py(ctx.map, path, old, new, fp)
+        b = rules.select_py(ctx.map, path, old, new, fp, ot, nt)
         if b == ALL:
             return ALL
         bits, need_fp = b
@@ -227,6 +235,7 @@ def source_lines_with(tokens):
 
 
 _IMPORTERS = [None]
+IMPORTERS_FILE = Path(os.environ.get("BR_IMPORTERS", str(HERE.parent / "maps" / "importers.json")))
 
 
 def _modname(rel):
@@ -238,6 +247,8 @@ def affected_modules(paths):
     """Changed modules plus every sqlglot module that imports them, transitively
     (static imports anywhere in the file, relative ones resolved)."""
     import ast as _ast
+    if _IMPORTERS[0] is None and IMPORTERS_FILE.exists():
+        _IMPORTERS[0] = {k: set(v) for k, v in json.loads(IMPORTERS_FILE.read_text()).items()}
     if _IMPORTERS[0] is None:
         imp = {}
         base = SRC / "sqlglot"
@@ -301,7 +312,7 @@ def fingerprint_select(ctx, text, cid):
     try:
         env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1")
         import subprocess
-        r = subprocess.run([sys.executable, str(HERE / "fp.py"), outp] + mods, cwd=str(ov), env=env,
+        r = subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), outp] + mods, cwd=str(ov), env=env,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
         if r.returncode != 0:
             return ALL
@@ -384,7 +395,8 @@ def patched_files(text):
 
 VERIFY_MAX_TEST = float(os.environ.get("BR_VMAX", "0.5"))
 VERIFY_BUDGET = float(os.environ.get("BR_VBUDGET", "1.0"))
-VERIFY = os.environ.get("BR_VERIFY", "1") == "1"
+VERIFY = os.environ.get("BR_VERIFY", "0") == "1"
+CPU_FACTOR = float(os.environ.get("BR_CPUF", "3.0"))  # judge CPU seconds per local second (measured)
 
 
 def cost_ms(workers, dur):
@@ -402,7 +414,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     best_after = cost_ms(pack(heavy, dur), dur)
     if any(not (fp.new or "").endswith(".py") for fp in difflib2.parse(text)):
         return sel  # data/fixture edits nearly always break their readers
-    est_cpu = 350 + 1.3 * sum(dur[n] for n in light)  # interpreter + imports + run
+    est_cpu = CPU_FACTOR * (350 + 1.3 * sum(dur[n] for n in light))  # interpreter + imports + run
     if before - best_after < est_cpu:
         return sel
     files = patched_files(text)

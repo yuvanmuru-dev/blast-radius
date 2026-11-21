@@ -175,10 +175,51 @@ def hunk_regions(fp):
     return regions
 
 
+_FN_CACHE = {}
+
+
+def _fn_nodes(tree):
+    k = id(tree)
+    ent = _FN_CACHE.get(k)
+    if ent is None or ent[0] is not tree:
+        ns = [n for n in ast.walk(tree) if isinstance(n, FUNC + (ast.Lambda,))]
+        ns.sort(key=lambda n: (n.lineno, n.col_offset))
+        ent = (tree, ns)
+        if len(_FN_CACHE) > 8:
+            _FN_CACHE.clear()
+        _FN_CACHE[k] = ent
+    return ent[1]
+
+
+def same_tree(a, b, skip=None):
+    """Structural AST equality (like comparing ast.dump without positions).
+    skip: {id(old_node): new_node} pairs whose bodies are ignored."""
+    stack = [(a, b)]
+    while stack:
+        x, y = stack.pop()
+        if type(x) is not type(y):
+            return False
+        if isinstance(x, ast.AST):
+            sk = skip is not None and id(x) in skip
+            if sk and skip[id(x)] is not y:
+                return False
+            for f in x._fields:
+                if sk and f == "body":
+                    continue
+                stack.append((getattr(x, f, None), getattr(y, f, None)))
+        elif isinstance(x, list):
+            if len(x) != len(y):
+                return False
+            stack.extend(zip(x, y))
+        elif x != y:
+            return False
+    return True
+
+
 def _nodes_containing(tree, lines, kinds):
     """All nodes of `kinds` whose body span contains every line, outermost first."""
     out = []
-    for node in ast.walk(tree):
+    for node in _fn_nodes(tree):
         if isinstance(node, kinds):
             if isinstance(node, ast.Lambda):
                 lo, hi = node.body.lineno, node.body.end_lineno
@@ -193,9 +234,7 @@ def _nodes_containing(tree, lines, kinds):
 
 
 def _ordered(tree, key):
-    ns = [n for n in ast.walk(tree) if isinstance(n, FUNC + (ast.Lambda,)) and _key(n) == key]
-    ns.sort(key=lambda n: (n.lineno, n.col_offset))
-    return ns
+    return [n for n in _fn_nodes(tree) if _key(n) == key]
 
 
 def _match_node(ot, nt, onode):
@@ -217,16 +256,18 @@ def _key(node):
     return (type(node).__name__, getattr(node, "name", "<lambda>"), ast.dump(node.args))
 
 
-def select_py(M, path, old, new, fp):
-    try:
-        ot = ast.parse(old)
-    except SyntaxError:
-        return ALL
-    try:
-        nt = ast.parse(new)
-    except SyntaxError:
-        return (M.file_any(path) | M.always, False)  # import breaks for its importers
-    if ast.dump(ot) == ast.dump(nt):
+def select_py(M, path, old, new, fp, ot=None, nt=None):
+    if ot is None:
+        try:
+            ot = ast.parse(old)
+        except SyntaxError:
+            return ALL
+    if nt is None:
+        try:
+            nt = ast.parse(new)
+        except SyntaxError:
+            return (M.file_any(path) | M.always, False)  # import breaks for its importers
+    if same_tree(ot, nt):
         return (0, False)
     old_text = old.split("\n")
     new_text = new.split("\n")
@@ -261,23 +302,14 @@ def select_py(M, path, old, new, fp):
             keep.append((onode, nnode, spans))
         if not keep and not need_fp:
             # every hunk was an equivalent swap: verify nothing else changed
-            import copy as _c
-            ot3, nt3 = _c.deepcopy(ot), _c.deepcopy(nt)
-            if _only_swaps_differ(ot3, nt3, M, path):
+            if _only_swaps_differ(ot, nt, M, path):
                 return (0, False)
         plan = keep if keep else plan
     if not plan:
         return (0, need_fp)
     # rigor: outside the changed bodies, old and new must be identical
-    import copy
-    ot2, nt2 = copy.deepcopy(ot), copy.deepcopy(nt)
-    o_map = {id(n): n2 for n, n2 in zip(ast.walk(ot), ast.walk(ot2))}
-    n_map = {id(n): n2 for n, n2 in zip(ast.walk(nt), ast.walk(nt2))}
-    for onode, nnode, _ in plan:
-        _blank(o_map[id(onode)])
-        if nnode is not None:
-            _blank(n_map[id(nnode)])
-    if ast.dump(ot2) != ast.dump(nt2):
+    skip = {id(onode): nnode for onode, nnode, _ in plan if nnode is not None}
+    if len(skip) != len({id(o) for o, _, _ in plan}) or not same_tree(ot, nt, skip):
         need_fp = True  # something outside the matched bodies changed too
     bits = 0
     for onode, nnode, spans in plan:
