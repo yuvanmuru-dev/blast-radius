@@ -1,6 +1,6 @@
 # Same base image the organisers labeled with (its Python and SQLite decide test outcomes).
 FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
-ENV PYTHONDONTWRITEBYTECODE=1 SKIP_INTEGRATION=0
+ENV PYTHONDONTWRITEBYTECODE=1 SKIP_INTEGRATION=0 BR_VERIFY=1 BR_CPUF=1.3
 COPY requirements.lock /app/requirements.lock
 RUN pip install --no-cache-dir -r /app/requirements.lock
 # sqlglot at the pinned commit, straight from its own repository
