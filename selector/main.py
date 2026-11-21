@@ -21,6 +21,7 @@ DATA = Path(os.environ.get("BR_DATA", "/data"))
 SRC = Path(os.environ.get("BR_SQLGLOT", "/opt/sqlglot")).resolve()
 WORKER_MS = 2000
 MAX_WORKERS = 8
+COARSE = os.environ.get("BR_COARSE", "0") == "1"  # diagnostic: file-level only
 MAP = Path(os.environ.get("BR_MAP", str(HERE.parent / "maps" / "map.json.gz")))
 
 ALL = "ALL"
@@ -129,6 +130,8 @@ def select_file(ctx, fp):
     new = difflib2.apply(old, fp)
     if new == old:
         return set()
+    if path.endswith(".py") and COARSE and ctx.map is not None:
+        return rules.bits_to_set(ctx.map.file_any(path) | ctx.map.always)
     if path.endswith(".py"):
         if ast_equal(old, new):
             return set()  # comment / whitespace only (docstrings are AST)
@@ -184,7 +187,10 @@ def _fp_base():
 
 
 def source_lines_with(tokens):
-    """{relfile: [line numbers]} of lines in sqlglot/ and tests/ mentioning any token."""
+    """{relfile: [line numbers]} of lines in sqlglot/ and tests/ (.py) where every
+    part of some token group appears (word-bounded)."""
+    import bisect
+    import re
     if _src_index[0] is None:
         idx = {}
         for base in ("sqlglot", "tests"):
@@ -193,23 +199,30 @@ def source_lines_with(tokens):
                 for f in files:
                     if f.endswith(".py"):
                         p = Path(d) / f
-                        idx[str(p.relative_to(SRC))] = p.read_text(encoding="utf-8").split("\n")
+                        text = p.read_text(encoding="utf-8")
+                        nl = [i for i, c in enumerate(text) if c == "\n"] if False else None
+                        idx[str(p.relative_to(SRC))] = [text, None]
         _src_index[0] = idx
-    import re
     groups = [t for t in tokens if t]
     flat = sorted({p for t in groups for p in t})
     if not flat:
         return {}
-    pat = re.compile(r"\b(" + "|".join(re.escape(t) for t in flat) + r")\b")
+    pat = re.compile(r"\b(?:" + "|".join(re.escape(t) for t in flat) + r")\b")
     out = {}
-    for f, lines in _src_index[0].items():
-        hits = []
-        for i, l in enumerate(lines):
-            found = set(pat.findall(l))
-            if found and any(all(p in found for p in g) for g in groups):
-                hits.append(i + 1)
+    for f, ent in _src_index[0].items():
+        text = ent[0]
+        if not pat.search(text):
+            continue
+        if ent[1] is None:
+            ent[1] = [m.start() for m in re.finditer("\n", text)]
+        nls = ent[1]
+        per_line = {}
+        for m in pat.finditer(text):
+            ln = bisect.bisect_left(nls, m.start()) + 1
+            per_line.setdefault(ln, set()).add(m.group(0))
+        hits = [ln for ln, found in per_line.items() if any(all(p in found for p in g) for g in groups)]
         if hits:
-            out[f] = hits
+            out[f] = sorted(hits)
     return out
 
 
@@ -429,6 +442,9 @@ def main():
         except Exception as e:  # never risk a miss
             log(cid, "error", repr(e))
             sel = ALL
+        if sel != ALL and ctx.map is not None and ctx.map.trans is not None:
+            t = ctx.map.trans
+            sel = ({t[o] for o in sel if o in t} | ctx.map.unknown_new) if sel else set()
         nums = ctx.all if sel == ALL else sorted(sel)
         workers = pack(nums, dur)
         log(cid, "ALL" if sel == ALL else len(nums), "workers", len(workers))

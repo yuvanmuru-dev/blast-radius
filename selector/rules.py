@@ -12,7 +12,14 @@ class Map:
     def __init__(self, path, n, tests=()):
         with gzip.open(path, "rt") as g:
             d = json.load(g)
-        if d["n"] != n:
+        ids = d.get("ids")
+        cur = [t["id"] for t in tests] if tests else None
+        self.trans = None
+        if cur is not None and ids is not None and ids != cur:
+            pos = {i: k for k, i in enumerate(cur)}
+            self.trans = {k: pos[i] for k, i in enumerate(ids) if i in pos}
+            self.unknown_new = set(range(len(cur))) - set(self.trans.values())
+        elif d["n"] != n:
             raise ValueError("map/tests mismatch")
         self.n = n
         self.sets = [int(h, 16) for h in d["sets"]]

@@ -51,6 +51,7 @@ for kind in ("m", "f"):
 for f, v in opens.items():
     res["o"][f] = intern(v)
 res["r"] = {c: intern(v) for c, v in recv.items()}
+res["ids"] = [t["id"] for t in tests]
 res["sets"] = sets
 os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
 with gzip.open(out, "wt", compresslevel=9) as g:
