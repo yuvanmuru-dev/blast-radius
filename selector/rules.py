@@ -299,7 +299,8 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
             need_fp = True
             continue
         spans = None
-        if not isinstance(onode, ast.Lambda) and nnode is not None and stored_names(onode) == stored_names(nnode):
+        if not isinstance(onode, ast.Lambda) and nnode is not None and stored_names(onode) == stored_names(nnode) \
+                and _expr_only_change(onode, nnode):
             spans = _spans_for(onode, rem, code_add, old_text)
         plan.append((onode, nnode, spans))
     # provably equivalent operator swaps (per-site value profile of the whole suite)
@@ -477,3 +478,28 @@ def _only_swaps_differ(ot, nt, M, path):
     pts = []
     _diff_points(ot, nt, pts)
     return all(_cmp_pair_ok(M, path, a, b) for a, b in pts)
+
+
+def _expr_only_change(onode, nnode):
+    """True when old and new function bodies have the same statement structure
+    and differ only inside expressions (so control flow reaches the same
+    statements). Otherwise statement-level selection is unsound."""
+    pts = []
+    _diff_points_body(onode, nnode, pts)
+    for a, b in pts:
+        if a is None or b is None:
+            return False
+        if isinstance(a, ast.stmt) or isinstance(b, ast.stmt):
+            return False
+        if isinstance(a, (ast.excepthandler, ast.match_case, ast.withitem)) or isinstance(
+                b, (ast.excepthandler, ast.match_case, ast.withitem)):
+            return False
+    return True
+
+
+def _diff_points_body(onode, nnode, out):
+    if len(onode.body) != len(nnode.body):
+        out.append((onode, nnode))
+        return
+    for x, y in zip(onode.body, nnode.body):
+        _diff_points(x, y, out)
