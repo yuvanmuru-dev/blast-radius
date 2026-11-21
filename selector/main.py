@@ -193,6 +193,7 @@ def select_commit(ctx, text, cid="x"):
 
 
 NARROW_ATTRS = os.environ.get("BR_NARROW", "1") == "1"
+FP_ALL = os.environ.get("BR_FP_ALL", "1") == "1"
 FP_BASE = Path(os.environ.get("BR_FPBASE", str(HERE.parent / "maps" / "fp_base.json")))
 _FPB = [None]
 _src_index = [None]
@@ -316,13 +317,15 @@ def fingerprint_select(ctx, text, cid):
     M = ctx.map
     base = _fp_base()
     files = patched_files(text)
-    mods = affected_modules(ctx.need_fp)
+    # hash every module: an import can also mutate state in modules it imports
+    # (registries), not only in modules that import it
+    mods = sorted({k.split(":", 1)[0] for k in _fp_base()["fp"]}) if FP_ALL else affected_modules(ctx.need_fp)
     ov = verify.build_overlay(SRC, "/tmp/ov", files)
     outp = "/tmp/fp_out.json"
     try:
         env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1")
         import subprocess
-        r = subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), outp] + mods, cwd=str(ov), env=env,
+        r = subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), outp] + ([] if FP_ALL else mods), cwd=str(ov), env=env,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
         if r.returncode != 0:
             return ALL
@@ -370,6 +373,8 @@ def fingerprint_select(ctx, text, cid):
         for f, lines in source_lines_with(glob_tokens).items():
             for l in lines:
                 bits |= M.lines("f", f, l, l)
+    if any(p.startswith("sqlglot/typing/") for p in ctx.need_fp):
+        bits |= M.file_tests("tests/test_typing.py")
     for owner, ent in by_owner.items():
         qparts = tuple(p for p in ent["qual"].split(".") if p and not p.startswith("<"))
         recv = M.receivers(owner)

@@ -273,6 +273,7 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
     new_text = new.split("\n")
     plan = []  # (old_node, spans or None)
     need_fp = False
+    fallback_bits = 0
     for old_l, new_l, rem, n_added in hunk_regions(fp):
         code_rem = [l for l in rem if not _is_trivia(old_text[l - 1])]
         code_add = [l for l in new_l if not _is_trivia(new_text[l - 1])]
@@ -287,6 +288,14 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
         onode = olds[-1]
         nnode = _match_node(ot, nt, onode)
         if nnode is None or (code_add and (not news or news[-1] is not nnode)):
+            # the edit is inside a function body but reshapes a nested function or
+            # lambda: everything that ran the outermost enclosing function, plus the
+            # import-time fingerprint for anything else
+            outer = olds[0]
+            lo = outer.lineno if isinstance(outer, ast.Lambda) else outer.body[0].lineno
+            fallback_bits |= M.lines("f", path, lo, outer.end_lineno)
+            if outer.lineno != lo:
+                fallback_bits |= M.lines("f", path, outer.lineno, lo)
             need_fp = True
             continue
         spans = None
@@ -303,10 +312,12 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
         if not keep and not need_fp:
             # every hunk was an equivalent swap: verify nothing else changed
             if _only_swaps_differ(ot, nt, M, path):
+                if path.startswith("sqlglot/typing/"):
+                    return (M.file_tests("tests/test_typing.py") | M.always, False)
                 return (0, False)
         plan = keep if keep else plan
     if not plan:
-        return (0, need_fp)
+        return (fallback_bits | (M.always if fallback_bits else 0), need_fp)
     # rigor: outside the changed bodies, old and new must be identical
     skip = {id(onode): nnode for onode, nnode, _ in plan if nnode is not None}
     if len(skip) != len({id(o) for o, _, _ in plan}) or not same_tree(ot, nt, skip):
@@ -324,6 +335,7 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
                 bits |= M.lines("f", path, lo, hi)
     if path.startswith("sqlglot/typing/"):
         bits |= M.file_tests("tests/test_typing.py")
+    bits |= fallback_bits
     if bits:
         bits |= M.always
     return (bits, need_fp)
