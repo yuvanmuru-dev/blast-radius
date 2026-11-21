@@ -22,6 +22,10 @@ SRC = Path(os.environ.get("BR_SQLGLOT", "/opt/sqlglot")).resolve()
 WORKER_MS = 2000
 MAX_WORKERS = 8
 COARSE = os.environ.get("BR_COARSE", "0") == "1"  # diagnostic: file-level only
+# bisection toggles (diagnostics): replace one rule family by the file-level rule
+T_COMMENT = os.environ.get("BR_T_COMMENT", "0") == "1"   # AST-identical edits
+T_FP = os.environ.get("BR_T_FP", "0") == "1"             # class/module-level edits
+T_FUNC = os.environ.get("BR_T_FUNC", "0") == "1"         # function/lambda body edits
 MAP = Path(os.environ.get("BR_MAP", str(HERE.parent / "maps" / "map.json.gz")))
 
 ALL = "ALL"
@@ -142,6 +146,8 @@ def select_file(ctx, fp):
         except SyntaxError:
             nt = None
         if nt is not None and rules.same_tree(ot, nt):
+            if T_COMMENT and ctx.map is not None:
+                return rules.bits_to_set(ctx.map.file_any(path) | ctx.map.always)
             return set()  # comment / whitespace only (docstrings are AST)
         if ctx.map is None:
             return ALL
@@ -149,6 +155,10 @@ def select_file(ctx, fp):
         if b == ALL:
             return ALL
         bits, need_fp = b
+        if T_FUNC:
+            bits = ctx.map.file_any(path) | ctx.map.always
+        if need_fp and T_FP:
+            return rules.bits_to_set(bits | ctx.map.file_any(path) | ctx.map.always)
         if need_fp:
             if not path.startswith("sqlglot/"):
                 # fingerprint covers sqlglot modules only: be conservative elsewhere
