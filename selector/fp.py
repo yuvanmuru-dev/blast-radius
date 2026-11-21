@@ -11,6 +11,7 @@ usage (child process, cwd = tree root on sys.path):
     python fp.py OUT.json [module ...]     # hash only these modules (default all)
 """
 import enum
+import functools
 import hashlib
 import importlib
 import json
@@ -19,7 +20,7 @@ import re
 import sys
 import types
 
-MAXDEPTH = 8
+MAXDEPTH = 24
 
 
 def _code_sig(c):
@@ -78,16 +79,34 @@ def h(v, depth=0, seen=None):
         return t.__name__ + "{" + ",".join(sorted(h(x, depth + 1, seen) for x in v)) + "}"
     if isinstance(v, re.Pattern):
         return f"R:{v.pattern!r}:{v.flags}"
-    if hasattr(v, "__dict__") and not isinstance(v, type):
-        try:
-            return "O:" + t.__module__ + "." + t.__qualname__ + h(dict(vars(v)), depth + 1, seen)
-        except TypeError:
-            pass
-    slots = getattr(t, "__slots__", None)
-    if slots:
+    if isinstance(v, functools.partial):
+        return "PA:" + h(v.func, depth + 1, seen) + h(v.args, depth + 1, seen) + h(v.keywords, depth + 1, seen)
+    state = {}
+    try:
+        d = object.__getattribute__(v, "__dict__")
+        if isinstance(d, dict):
+            state.update(d)
+    except AttributeError:
+        pass
+    for klass in getattr(t, "__mro__", ()):
+        slots = klass.__dict__.get("__slots__", ())
         if isinstance(slots, str):
             slots = (slots,)
-        return "S:" + t.__qualname__ + "(" + ",".join(h(getattr(v, s, None), depth + 1, seen) for s in slots) + ")"
+        for sl in slots:
+            if sl in ("__dict__", "__weakref__") or sl in state:
+                continue
+            try:
+                state[sl] = getattr(v, sl)
+            except Exception:  # noqa: BLE001
+                state[sl] = "<unset>"
+    if state:
+        return "O:" + t.__module__ + "." + t.__qualname__ + h(state, depth + 1, seen)
+    try:
+        r = repr(v)
+    except Exception:  # noqa: BLE001
+        r = ""
+    if r and " at 0x" not in r and len(r) < 2000:
+        return "R:" + t.__module__ + "." + t.__qualname__ + ":" + r
     return "X:" + t.__module__ + "." + t.__qualname__
 
 
