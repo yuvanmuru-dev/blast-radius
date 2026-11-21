@@ -18,6 +18,7 @@ SRC = Path(a.src)
 py_files = sorted(p for p in (SRC / "sqlglot").rglob("*.py") if "__pycache__" not in p.parts)
 # weight like the samples: dialects/parsers/generators/optimizer/expressions/executor
 fixtures = sorted((SRC / "tests" / "fixtures").rglob("*.sql"))
+test_files = sorted(p for p in (SRC / "tests").rglob("*.py") if "fixtures" not in p.parts and "__pycache__" not in p.parts)
 
 SWAPS = [
     (r"\bis not\b", "!="), (r"\bis None\b", "== None"), (r" is ", " == "), (r" == ", " != "), (r" != ", " == "),
@@ -90,6 +91,76 @@ def mutate_code(text, tree):
     return None
 
 
+def mutate_extra(text, tree):
+    """Other realistic edits: string literals, numbers, defaults, deletions,
+    early returns, swapped arguments, enum values."""
+    lines = text.split("\n")
+    kinds = ["str", "num", "default", "delete", "return", "swapargs"]
+    rng.shuffle(kinds)
+    nodes = list(ast.walk(tree))
+    rng.shuffle(nodes)
+    for kind in kinds:
+        for n in nodes[:400]:
+            out = None
+            if kind == "str" and isinstance(n, ast.Constant) and isinstance(n.value, str) and 2 <= len(n.value) <= 40 \
+                    and n.lineno == n.end_lineno and "\\" not in lines[n.lineno - 1]:
+                s = lines[n.lineno - 1]
+                seg = s[n.col_offset:n.end_col_offset]
+                if len(seg) >= 4 and seg[0] in "'\"" and seg[-1] == seg[0]:
+                    inner = seg[1:-1]
+                    new_inner = inner[:-1] if rng.random() < 0.5 else inner + "_"
+                    out = s[:n.col_offset] + seg[0] + new_inner + seg[0] + s[n.end_col_offset:]
+            elif kind == "num" and isinstance(n, ast.Constant) and type(n.value) is int and n.lineno == n.end_lineno:
+                s = lines[n.lineno - 1]
+                seg = s[n.col_offset:n.end_col_offset]
+                if seg.isdigit():
+                    out = s[:n.col_offset] + str(int(seg) + rng.choice([1, -1, 10])) + s[n.end_col_offset:]
+            elif kind == "default" and isinstance(n, (ast.FunctionDef,)) and n.args.defaults:
+                d = rng.choice(n.args.defaults)
+                if isinstance(d, ast.Constant) and d.lineno == d.end_lineno and type(d.value) in (bool, type(None), int):
+                    s = lines[d.lineno - 1]
+                    seg = s[d.col_offset:d.end_col_offset]
+                    rep = {"True": "False", "False": "True", "None": "0"}.get(seg, str(d.value + 1) if type(d.value) is int else None)
+                    if rep:
+                        out = s[:d.col_offset] + rep + s[d.end_col_offset:]
+            elif kind in ("delete", "return") and isinstance(n, (ast.FunctionDef,)) and len(n.body) >= 2:
+                st = rng.choice(n.body[1:])
+                if st.lineno == st.end_lineno and isinstance(st, (ast.Expr, ast.Assign, ast.AugAssign, ast.Return, ast.If)):
+                    ind = re.match(r"\s*", lines[st.lineno - 1]).group(0)
+                    if kind == "delete" and not isinstance(st, ast.Return):
+                        out_lines = lines[: st.lineno - 1] + [ind + "pass"] + lines[st.lineno:]
+                        nt = "\n".join(out_lines)
+                        try:
+                            ast.parse(nt); return nt
+                        except SyntaxError:
+                            continue
+                    elif kind == "return":
+                        out_lines = lines[: st.lineno - 1] + [ind + "return None"] + lines[st.lineno - 1:]
+                        nt = "\n".join(out_lines)
+                        try:
+                            ast.parse(nt); return nt
+                        except SyntaxError:
+                            continue
+            elif kind == "swapargs" and isinstance(n, ast.Call) and len(n.args) >= 2 and n.lineno == n.end_lineno:
+                a0, a1 = n.args[0], n.args[1]
+                if a0.lineno == a1.lineno == n.lineno:
+                    s = lines[n.lineno - 1]
+                    t0, t1 = s[a0.col_offset:a0.end_col_offset], s[a1.col_offset:a1.end_col_offset]
+                    if t0 != t1 and a0.end_col_offset <= a1.col_offset:
+                        out = s[:a0.col_offset] + t1 + s[a0.end_col_offset:a1.col_offset] + t0 + s[a1.end_col_offset:]
+            if out is not None and out != lines[(n.lineno if not isinstance(n, ast.FunctionDef) else d.lineno) - 1] if kind == "default" and out else out is not None:
+                ln = (d.lineno if kind == "default" else n.lineno)
+                nl = lines[:]
+                nl[ln - 1] = out
+                nt = "\n".join(nl)
+                try:
+                    ast.parse(nt)
+                except SyntaxError:
+                    continue
+                return nt
+    return None
+
+
 def mutate_comment(text, tree):
     lines = text.split("\n")
     funcs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.body]
@@ -129,24 +200,29 @@ def mutate_fixture(text):
 
 
 def one():
-    kind = rng.choices(["code", "comment", "fixture", "multi"], [0.6, 0.1, 0.2, 0.1])[0]
+    kind = rng.choices(["code", "extra", "comment", "fixture", "multi", "test"], [0.3, 0.35, 0.05, 0.15, 0.1, 0.05])[0]
     parts = []
     k = 2 if kind == "multi" else 1
     for j in range(k):
-        sub = kind if kind != "multi" else rng.choice(["code", "code", "fixture"])
+        sub = kind if kind != "multi" else rng.choice(["code", "extra", "fixture", "comment"])
         for _ in range(30):
             if sub == "fixture":
                 p = rng.choice(fixtures)
                 old = p.read_text()
                 new = mutate_fixture(old)
             else:
-                p = rng.choice(py_files)
+                p = rng.choice(test_files if sub == "test" else py_files)
                 old = p.read_text()
                 try:
                     tree = ast.parse(old)
                 except SyntaxError:
                     continue
-                new = mutate_code(old, tree) if sub == "code" else mutate_comment(old, tree)
+                if sub in ("code", "test"):
+                    new = mutate_code(old, tree)
+                elif sub == "extra":
+                    new = mutate_extra(old, tree)
+                else:
+                    new = mutate_comment(old, tree)
             if new and new != old and not any(rel(p) == q for q, _ in parts):
                 if old.endswith("\n") and not new.endswith("\n"):
                     new += "\n"
