@@ -245,6 +245,17 @@ def _match_node(ot, nt, onode):
     return b[a.index(onode)]
 
 
+def _match_back(ot, nt, nnode):
+    k = _key(nnode)
+    a, b = _ordered(ot, k), _ordered(nt, k)
+    if len(a) != len(b):
+        return None
+    for x, y in zip(a, b):
+        if y is nnode:
+            return x
+    return None
+
+
 def _blank(node):
     if isinstance(node, ast.Lambda):
         node.body = ast.Constant(value="__BR__")
@@ -282,9 +293,36 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
         anchor_lines = code_rem if code_rem else [l for l in old_l]
         olds = _nodes_containing(ot, anchor_lines, FUNC + (ast.Lambda,))
         news = _nodes_containing(nt, code_add, FUNC + (ast.Lambda,)) if code_add else []
+        if not code_rem and news:
+            # pure insertion: locate it in the new tree (the old-side anchors can
+            # straddle a function boundary), then map back to the old function
+            olds = [o for o in (_match_back(ot, nt, x) for x in news) if o is not None]
+            if len(olds) != len(news):
+                # cannot map back: whole enclosing outer function in the new tree
+                outer = news[0]
+                ob = _match_back(ot, nt, outer)
+                if ob is not None:
+                    lo = ob.lineno if isinstance(ob, ast.Lambda) else ob.body[0].lineno
+                    fallback_bits |= M.lines("f", path, ob.lineno, ob.end_lineno)
+                need_fp = True
+                continue
+        elif news and not olds:
+            # code removed outside any function but added inside one (or vice versa)
+            need_fp = True
+            for x in news:
+                ob = _match_back(ot, nt, x)
+                if ob is not None:
+                    fallback_bits |= M.lines("f", path, ob.lineno, ob.end_lineno)
+            continue
         if not olds:
             need_fp = True  # class / module level: import-time fingerprint decides
             continue
+        if code_rem and code_add and news:
+            # removed lines in one function, added lines in another -> both
+            ob = _match_back(ot, nt, news[-1])
+            if ob is not None and ob is not olds[-1] and not any(ob is o for o in olds):
+                fallback_bits |= M.lines("f", path, ob.lineno, ob.end_lineno)
+                need_fp = True
         onode = olds[-1]
         nnode = _match_node(ot, nt, onode)
         if nnode is None or (code_add and (not news or news[-1] is not nnode)):
@@ -503,3 +541,47 @@ def _diff_points_body(onode, nnode, out):
         return
     for x, y in zip(onode.body, nnode.body):
         _diff_points(x, y, out)
+
+
+def _strip_inert(tree):
+    """Copy of tree without module/class-level docstrings, TYPE_CHECKING blocks
+    and annotation-only differences (none of which run at import)."""
+    import copy
+    t = copy.deepcopy(tree)
+
+    def is_tc(test):
+        return (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING") or (
+            isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
+
+    def clean(body):
+        out = []
+        for st in body:
+            if isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant) and isinstance(st.value.value, str):
+                continue
+            if isinstance(st, ast.If) and is_tc(st.test):
+                st.body = [ast.Pass()]
+            if isinstance(st, ast.AnnAssign):
+                if st.value is None:
+                    continue
+                st.annotation = ast.Constant(None)
+            if isinstance(st, ast.ClassDef):
+                st.body = clean(st.body) or [ast.Pass()]
+            if isinstance(st, FUNC):
+                if st.body and isinstance(st.body[0], ast.Expr) and isinstance(getattr(st.body[0], "value", None), ast.Constant) \
+                        and isinstance(st.body[0].value.value, str):
+                    st.body = st.body[1:] or [ast.Pass()]
+                st.returns = None
+                for a in st.args.args + st.args.kwonlyargs + st.args.posonlyargs:
+                    a.annotation = None
+            out.append(st)
+        return out
+
+    t.body = clean(t.body)
+    return t
+
+
+def inert_change(old, new):
+    try:
+        return same_tree(_strip_inert(ast.parse(old)), _strip_inert(ast.parse(new)))
+    except SyntaxError:
+        return False

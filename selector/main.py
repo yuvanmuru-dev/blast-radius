@@ -164,6 +164,7 @@ def select_file(ctx, fp):
                 # fingerprint covers sqlglot modules only: be conservative elsewhere
                 return rules.bits_to_set(bits | ctx.map.file_any(path) | ctx.map.always)
             ctx.need_fp.append(path)
+            ctx.need_fp_src[path] = (old, new)
         return rules.bits_to_set(bits)
     if ctx.map is None:
         return ALL
@@ -178,6 +179,7 @@ def select_commit(ctx, text, cid="x"):
     if not files:
         return ALL
     ctx.need_fp = []
+    ctx.need_fp_src = {}
     out = set()
     for fp in files:
         s = select_file(ctx, fp)
@@ -369,6 +371,14 @@ def fingerprint_select(ctx, text, cid):
     log(cid, "fp changed", {o: sorted(e["attrs"])[:4] for o, e in list(by_owner.items())[:4]}, sorted(glob_tokens)[:4])
     if len(by_owner) > 400:
         return ALL
+    if not by_owner and not glob_tokens and not failed:
+        # a code edit outside functions that changes no import-time state is
+        # unexpected unless it only touched docstrings / TYPE_CHECKING / annotations:
+        # otherwise do not trust it and fall back to everything touching the file
+        for p, (o, n) in ctx.need_fp_src.items():
+            if not rules.inert_change(o, n):
+                bits |= M.file_any(p)
+        return bits
     if glob_tokens:
         for f, lines in source_lines_with(glob_tokens).items():
             for l in lines:
