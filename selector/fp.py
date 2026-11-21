@@ -20,7 +20,7 @@ import re
 import sys
 import types
 
-MAXDEPTH = 24
+MAXDEPTH = 250
 
 
 def _code_sig(c):
