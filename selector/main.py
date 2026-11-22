@@ -888,7 +888,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3")
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4")
 DIAG_MODE = os.environ.get("BR_DIAG", "0")
 DIAG_GROUPS = [
     ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
@@ -962,6 +962,31 @@ def diag3_answers(rows, tests, dur):
         out.append([cid, w])
         base += cost_ms(w, dur)
     target = 500000 + (code if code is not None else 255 * 4096 + 4095)
+    return _diag_pad(out, base, target, tid, dur)
+
+
+def diag4_answers(rows, tests, dur):
+    """Practice diagnostic 4: DIAG_TEST removed from the BR_DIAG_IDX-th commit
+    that selects it (miss count = whether that one needed it). Total =
+    500000 + N + 128*nonempty + 16384*cheap, where cheap = non-empty
+    selections costing <= 6 s (ms)."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    want = int(os.environ.get("BR_DIAG_IDX", "2"))
+    out, base, k, n, nonempty, cheap = [], 0, 0, 0, 0, 0
+    for cid, nums, *_ in rows:
+        n += 1
+        c = cost_ms(pack(nums, dur), dur)
+        nonempty += bool(nums)
+        cheap += bool(nums) and c <= 6000
+        if tid in nums:
+            if k == want:
+                nums = [x for x in nums if x != tid]
+            k += 1
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    target = 500000 + min(n, 127) + 128 * min(nonempty, 127) + 16384 * min(cheap, 127)
+    log("DIAG4 n", n, "nonempty", nonempty, "cheap", cheap, "tpcds commits", k, "base", base, "target", target)
     return _diag_pad(out, base, target, tid, dur)
 
 
@@ -1083,7 +1108,7 @@ def main():
         log(cid, "ALL" if sel == ALL else len(nums), "workers", len(workers))
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
-        answers = {"2": diag2_answers, "3": diag3_answers}.get(DIAG_MODE, diag_answers)(diag_rows, tests, dur)
+        answers = {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers}.get(DIAG_MODE, diag_answers)(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
 
