@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7215,7 +7215,7 @@
+         column: exp.Expr | None = self._parse_column_parts_fast()
+         if column is None:
+             this = self._parse_column_reference()
+-            if not this:
++            if not not this:
+                 this = self._parse_bracket(this)
+             column = self._parse_column_ops(this) if this else this
+ 

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -402,7 +402,7 @@
+ 
+         # Prefer hex, then octal, then Unicode for numeric control-character escapes.
+         numeric_escapes = klass.tokenizer_class.NUMERIC_ESCAPES
+-        if "x" in numeric_escapes:
++        if not "x" in numeric_escapes:
+             fmt = "\\x{:02x}"
+         elif "0" in numeric_escapes:
+             fmt = "\\{:03o}"

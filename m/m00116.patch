@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4223,7 +4223,7 @@
+ 
+             hint = self._parse_hint()
+ 
+-            if self._next and not self._next.token_type == TokenType.DOT:
++            if not self._next and not self._next.token_type == TokenType.DOT:
+                 all_ = self._match(TokenType.ALL)
+                 matched_distinct = self._match_set(self.DISTINCT_TOKENS)
+             else:

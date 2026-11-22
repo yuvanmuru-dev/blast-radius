@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6865,7 +6865,7 @@
+             type_token = self._prev.token_type
+         else:
+             type_token = None
+-            identifier = allow_identifiers and self._parse_id_var(
++            identifier = allow_identifiers or self._parse_id_var(
+                 any_token=False, tokens=(TokenType.VAR,)
+             )
+             if isinstance(identifier, exp.Identifier):

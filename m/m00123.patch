@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4249,7 +4249,7 @@
+             while self._curr and self._match_texts(self.OPERATION_MODIFIERS):
+                 operation_modifiers.append(exp.var(self._prev.text.upper()))
+ 
+-            limit = self._parse_limit(top=True)
++            limit = self._parse_limit(top=False)
+ 
+             # Some dialects (e.g. Redshift, T-SQL) allow SELECT TOP N DISTINCT ...
+             if limit and not matched_distinct and not all_:

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7314,7 +7314,7 @@
+             # We bubble up comments from the Identifier to the Column
+             this = self.expression(exp.Column(this=this), comments=this.pop_comments())
+ 
+-        return this
++        return None
+ 
+     def _build_json_extract(
+         self,

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1768,7 +1768,7 @@
+ 
+     @classmethod
+     def number(cls, number: object) -> Literal | Neg:
+-        lit = cls(this=str(number), is_string=False)
++        lit = cls(this=str(number), is_string=True)
+         try:
+             to_py = lit.to_py()
+             if not isinstance(to_py, str) and to_py < 0:

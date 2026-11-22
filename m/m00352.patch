@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7584,7 +7584,7 @@
+             any_token=any_token,
+         )
+ 
+-        if fn_syntax:
++        if not fn_syntax:
+             self._match(TokenType.R_BRACE)
+ 
+         return func

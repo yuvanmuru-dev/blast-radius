@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -849,7 +849,7 @@
+         word = None
+         chars = self._char
+         char = chars
+-        prev_space = False
++        prev_space = True
+         skip = False
+         trie = self.keyword_trie
+         single_token = char in single_tokens

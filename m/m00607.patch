@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -420,7 +420,7 @@
+ 
+         klass.SUPPORTS_COLUMN_JOIN_MARKS = "(+)" in klass.tokenizer_class.KEYWORDS
+ 
+-        if enum not in ("", "bigquery", "snowflake"):
++        if not enum not in ("", "bigquery", "snowflake"):
+             klass.INITCAP_SUPPORTS_CUSTOM_DELIMITERS = False
+ 
+         klass.VALID_INTERVAL_UNITS = {

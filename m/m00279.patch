@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6778,7 +6778,7 @@
+             return self._parse_column_ops(interval)
+ 
+         index = self._index
+-        data_type = self._parse_types(check_func=True, allow_identifiers=False)
++        data_type = self._parse_types(check_func=False, allow_identifiers=False)
+ 
+         # parse_types() returns a Cast if we parsed BQ's inline constructor <type>(<values>) e.g.
+         # STRUCT<a INT, b STRING>(1, 'foo'), which is canonicalized to CAST(<values> AS <type>)

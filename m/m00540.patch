@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -876,7 +876,7 @@
+                         char = " "
+                     chars += char
+                     prev_space = is_space
+-                    skip = False
++                    skip = True
+                 else:
+                     skip = True
+             else:

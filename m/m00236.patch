@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6349,7 +6349,7 @@
+             if isinstance(expression, (exp.Predicate, exp.Connector, exp.Not, exp.Escape)):
+                 expression = exp.Paren(this=expression)
+         else:
+-            if isinstance(this.this if isinstance(this, exp.Not) else this, is_predicates):
++            if isinstance(this.this if not isinstance(this, exp.Not) else this, is_predicates):
+                 this = exp.Paren(this=this)
+             if isinstance(
+                 expression.this if isinstance(expression, exp.Not) else expression, is_predicates

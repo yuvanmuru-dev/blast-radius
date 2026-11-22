@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7568,7 +7568,7 @@
+     ) -> exp.Expr | None:
+         # This allows us to also parse {fn <function>} syntax (Snowflake, MySQL support this)
+         # See: https://community.snowflake.com/s/article/SQL-Escape-Sequences
+-        fn_syntax = False
++        fn_syntax = True
+         if (
+             self._match(TokenType.L_BRACE, advance=False)
+             and self._next

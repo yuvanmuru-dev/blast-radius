@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1771,7 +1771,7 @@
+         lit = cls(this=str(number), is_string=False)
+         try:
+             to_py = lit.to_py()
+-            if not isinstance(to_py, str) and to_py < 0:
++            if not isinstance(to_py, str) and to_py < 1:
+                 lit.set("this", str(abs(to_py)))
+                 return Neg(this=lit)
+         except Exception:

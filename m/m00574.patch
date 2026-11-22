@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -1183,7 +1183,7 @@
+                 break
+             if peek not in var_single_tokens and peek in single_tokens:
+                 break
+-            self._advance(alnum=True)
++            self._advance(alnum=False)
+ 
+         self._add(
+             TokenType.VAR

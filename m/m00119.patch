@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4231,7 +4231,7 @@
+ 
+             kind = (
+                 self._prev.text.upper()
+-                if self._match(TokenType.ALIAS) and self._match_texts(("STRUCT", "VALUE"))
++                if self._match(TokenType.ALIAS) or self._match_texts(("STRUCT", "VALUE"))
+                 else None
+             )
+ 

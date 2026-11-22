@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -379,7 +379,7 @@
+             "\\" in klass.tokenizer_class.BYTE_STRING_ESCAPES
+         )
+ 
+-        if klass.STRINGS_SUPPORT_ESCAPED_SEQUENCES or klass.BYTE_STRINGS_SUPPORT_ESCAPED_SEQUENCES:
++        if klass.STRINGS_SUPPORT_ESCAPED_SEQUENCES and klass.BYTE_STRINGS_SUPPORT_ESCAPED_SEQUENCES:
+             klass.UNESCAPED_SEQUENCES = {
+                 **UNESCAPED_SEQUENCES,
+                 **klass.UNESCAPED_SEQUENCES,

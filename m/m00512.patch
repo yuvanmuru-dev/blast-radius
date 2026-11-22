@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -781,7 +781,7 @@
+             self._current = _current
+             self._end = _end
+             self._peek = _peek
+-            self._char = sql[_current - 1]
++            self._char = sql[_current - 2]
+ 
+     @property
+     def _text(self) -> str:

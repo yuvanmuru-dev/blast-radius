@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7295,7 +7295,7 @@
+             for i in range(4, n):
+                 column = exp.Dot(this=column, expression=parts[i])
+ 
+-        if all_comments:
++        if not all_comments:
+             column.add_comments(all_comments)
+ 
+         return column

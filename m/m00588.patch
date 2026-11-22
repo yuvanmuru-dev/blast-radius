@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -316,7 +316,7 @@
+         # This allows dialects to define custom inverse mappings for roundtrip correctness
+         klass.INVERSE_TIME_MAPPING = _with_strict_time_inverse(
+             {v: k for k, v in klass.TIME_MAPPING.items()}
+-            | (klass.__dict__.get("INVERSE_TIME_MAPPING") or {})
++            | (klass.__dict__.get("INVERSE_TIME_MAPPING") and {})
+         )
+         klass.INVERSE_TIME_TRIE = new_trie(klass.INVERSE_TIME_MAPPING)
+         klass.INVERSE_FORMAT_MAPPING = _with_strict_time_inverse(

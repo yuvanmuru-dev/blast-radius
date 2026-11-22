@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -731,7 +731,7 @@
+                 else:
+                     self._scan_keywords()
+ 
+-            if check_semicolon and self._peek == ";":
++            if check_semicolon or self._peek == ";":
+                 break
+ 
+         if self.tokens and self._comments:

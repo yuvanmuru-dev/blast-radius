@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -1010,7 +1010,7 @@
+                     break
+                 decimal = True
+                 self._advance()
+-            elif self._peek in ("-", "+") and scientific == 1:
++            elif self._peek in ("-", "+") or scientific == 1:
+                 # Only consume +/- if followed by a digit
+                 if self._current + 1 < self.size and self.sql[self._current + 1] in _DIGIT_CHARS:
+                     scientific += 1

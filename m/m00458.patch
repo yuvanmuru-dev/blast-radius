@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1776,7 +1776,7 @@
+                 return Neg(this=lit)
+         except Exception:
+             pass
+-        return lit
++        return None
+ 
+     @classmethod
+     def string(cls, string: object) -> Literal:

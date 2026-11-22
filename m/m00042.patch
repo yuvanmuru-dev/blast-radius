@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2121,7 +2121,7 @@
+             if advance:
+                 self._advance()
+             return True
+-        return False
++        return None
+ 
+     def _match_pair(
+         self, token_type_a: TokenType, token_type_b: TokenType, advance: bool = True

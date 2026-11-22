@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -350,7 +350,7 @@
+         # Remove transforms that correspond to unsupported JSONPathPart expressions
+         gen_cls = klass.generator_class
+         supported = getattr(gen_cls, "SUPPORTED_JSON_PATH_PARTS", None)
+-        if isinstance(supported, set):
++        if not isinstance(supported, set):
+             for part in ALL_JSON_PATH_PARTS - supported:
+                 gen_cls.TRANSFORMS.pop(part, None)
+ 

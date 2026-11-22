@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -5088,7 +5088,7 @@
+             curr_tt = self._curr.token_type
+ 
+             if not has_dot:
+-                if curr_tt in self.TABLE_POSTFIX_TOKENS:
++                if not curr_tt in self.TABLE_POSTFIX_TOKENS:
+                     self._retreat(index)
+                     return None
+             elif curr_tt not in self.IDENTIFIER_TOKENS:

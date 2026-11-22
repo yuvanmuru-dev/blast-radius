@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4888,7 +4888,7 @@
+             method = None
+             side = None
+ 
+-        outer_apply = self._match_pair(TokenType.OUTER, TokenType.APPLY, False)
++        outer_apply = self._match_pair(TokenType.OUTER, TokenType.APPLY, True)
+         cross_apply = self._match_pair(TokenType.CROSS, TokenType.APPLY, False)
+ 
+         if not skip_join_token and not join and not outer_apply and not cross_apply:

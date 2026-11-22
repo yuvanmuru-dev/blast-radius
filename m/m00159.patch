@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4846,7 +4846,7 @@
+         self,
+     ) -> tuple[Token | None, Token | None, Token | None]:
+         return (
+-            self._prev if self._match_set(self.JOIN_METHODS) else None,
++            self._prev if not self._match_set(self.JOIN_METHODS) else None,
+             self._prev if self._match_set(self.JOIN_SIDES) else None,
+             self._prev if self._match_set(self.JOIN_KINDS) else None,
+         )

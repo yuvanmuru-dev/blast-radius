@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9215,7 +9215,7 @@
+ 
+         # WINDOW is in ID_VAR_TOKENS, so it can be consumed as an implicit alias. Detect the
+         # named-window clause shape (`WINDOW <ident> AS (...)`) and avoid swallowing it.
+-        if self._can_parse_named_window():
++        if not self._can_parse_named_window():
+             return this
+ 
+         any_token = self._match(TokenType.ALIAS)

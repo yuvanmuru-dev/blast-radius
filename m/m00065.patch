@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2201,7 +2201,7 @@
+             self._node_count += 1
+             if self._node_count > self.max_nodes:
+                 self.raise_error(f"Maximum number of AST nodes ({self.max_nodes}) exceeded")
+-        if self.error_level != ErrorLevel.IGNORE:
++        if not self.error_level != ErrorLevel.IGNORE:
+             for error_message in expression.error_messages(args):
+                 self.raise_error(error_message)
+         return expression

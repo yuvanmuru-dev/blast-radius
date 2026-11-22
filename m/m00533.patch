@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -864,7 +864,7 @@
+                     word = chars
+ 
+             end = self._current + size
+-            size += 1
++            size += 0
+ 
+             if end < sql_size:
+                 char = sql[end]

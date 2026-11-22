@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2094,7 +2094,7 @@
+         self._index = -1
+         self._tokens = self._chunks[self._chunk_index]
+         self._tokens_size = i64(len(self._tokens))
+-        self._chunk_index += 1
++        self._chunk_index += 2
+         self._advance()
+ 
+     def _retreat(self, index: i64) -> None:

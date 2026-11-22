@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9261,7 +9261,7 @@
+             quoted = self._prev.token_type == TokenType.STRING
+             expression = self._identifier_expression(quoted=quoted)
+ 
+-        return expression
++        return None
+ 
+     def _parse_string(self) -> exp.Expr | None:
+         if self._match_set(self.STRING_PARSERS):

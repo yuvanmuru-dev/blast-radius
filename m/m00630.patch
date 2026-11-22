@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -107,7 +107,7 @@
+         cls._BYTE_STRING_ESCAPES = set(cls.BYTE_STRING_ESCAPES)
+         cls._IDENTIFIER_ESCAPES = set(cls.IDENTIFIER_ESCAPES)
+         cls._COMMENTS = {
+-            **{c: None for c in cls.COMMENTS if isinstance(c, str)},
++            **{c: None for c in cls.COMMENTS if not isinstance(c, str)},
+             **{c[0]: c[1] for c in cls.COMMENTS if not isinstance(c, str)},
+             "{#": "#}",  # Ensure Jinja comments are tokenized correctly in all dialects
+         }

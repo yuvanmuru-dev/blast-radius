@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -860,7 +860,7 @@
+                 if sub is None:
+                     break
+                 trie = sub
+-                if 0 in trie:
++                if not 0 in trie:
+                     word = chars
+ 
+             end = self._current + size

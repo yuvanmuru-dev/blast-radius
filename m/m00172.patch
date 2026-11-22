@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4891,7 +4891,7 @@
+         outer_apply = self._match_pair(TokenType.OUTER, TokenType.APPLY, False)
+         cross_apply = self._match_pair(TokenType.CROSS, TokenType.APPLY, False)
+ 
+-        if not skip_join_token and not join and not outer_apply and not cross_apply:
++        if not skip_join_token and not join or not outer_apply and not cross_apply:
+             return None
+ 
+         kwargs: dict[str, t.Any] = {

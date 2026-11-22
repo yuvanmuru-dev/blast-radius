@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -774,7 +774,7 @@
+             while _peek.isalnum():
+                 _col += 1
+                 _current += 1
+-                _end = _current >= size
++                _end = _current > size
+                 _peek = "" if _end else sql[_current]
+ 
+             self._col = _col

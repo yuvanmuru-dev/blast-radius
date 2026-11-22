@@ -1,0 +1,13 @@
+diff --git a/sqlglot/__init__.py b/sqlglot/__init__.py
+index 0000000..1111111 100644
+--- a/sqlglot/__init__.py
++++ b/sqlglot/__init__.py
+@@ -155,7 +155,7 @@
+         A single syntax tree if one statement is parsed, otherwise a Block expression containing all parsed syntax trees.
+     """
+ 
+-    dialect = Dialect.get_or_raise(read or dialect)
++    dialect = Dialect.get_or_raise(read and dialect)
+ 
+     if into:
+         result = dialect.parse_into(into, sql, **opts)

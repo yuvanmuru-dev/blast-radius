@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6406,7 +6406,7 @@
+         this = this or self._parse_bitwise()
+ 
+         while True:
+-            if not parse_is and self._is_predicate_ahead():
++            if not not parse_is and self._is_predicate_ahead():
+                 break
+             negate = self._match(TokenType.NOT)
+             if self._match_set(self.RANGE_PARSERS):

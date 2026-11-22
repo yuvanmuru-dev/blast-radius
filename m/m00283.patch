@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6826,7 +6826,7 @@
+ 
+             self._retreat(index)
+ 
+-        if fallback_to_identifier:
++        if not fallback_to_identifier:
+             return self._parse_id_var()
+ 
+         return self._parse_column()

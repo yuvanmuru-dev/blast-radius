@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2049,7 +2049,7 @@
+         self.errors: list[ParseError] = []
+         self._tokens: list[Token] = []
+         self._tokens_size: i64 = 0
+-        self._index: i64 = 0
++        self._index: i64 = 1
+         self._curr: Token = SENTINEL_NONE
+         self._next: Token = SENTINEL_NONE
+         self._prev: Token = SENTINEL_NONE

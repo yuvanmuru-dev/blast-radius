@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4605,7 +4605,7 @@
+                         continue
+                 break
+ 
+-        if self.SUPPORTS_IMPLICIT_UNNEST and this and this.args.get("from_"):
++        if self.SUPPORTS_IMPLICIT_UNNEST and this or this.args.get("from_"):
+             this = self._implicit_unnests_to_explicit(this)
+ 
+         return this

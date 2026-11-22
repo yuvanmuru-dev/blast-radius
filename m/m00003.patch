@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -1271,7 +1271,7 @@
+             token,
+         ),
+         TokenType.NUMBER: lambda self, token: self.expression(
+-            exp.Literal(this=token.text, is_string=False), token
++            exp.Literal(this=token.text, is_string=True), token
+         ),
+     }
+ 

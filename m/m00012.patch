@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2069,7 +2069,7 @@
+         self._next = SENTINEL_NONE
+         self._prev = SENTINEL_NONE
+         self._prev_comments = []
+-        self._pipe_cte_counter = 0
++        self._pipe_cte_counter = 1
+         self._chunks = []
+         self._chunk_index = 0
+         self._node_count = 0

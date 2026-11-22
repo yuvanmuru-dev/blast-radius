@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -306,7 +306,7 @@
+     def __new__(cls, clsname, bases, attrs):
+         klass = super().__new__(cls, clsname, bases, attrs)
+         enum = Dialects.__members__.get(clsname.upper())
+-        cls._classes[enum.value if enum is not None else clsname.lower()] = klass
++        cls._classes[enum.value if enum is None else clsname.lower()] = klass
+ 
+         klass.TIME_TRIE = new_trie(klass.TIME_MAPPING)
+         klass.FORMAT_TRIE = (

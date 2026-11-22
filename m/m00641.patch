@@ -1,0 +1,13 @@
+diff --git a/sqlglot/trie.py b/sqlglot/trie.py
+index 0000000..1111111 100644
+--- a/sqlglot/trie.py
++++ b/sqlglot/trie.py
+@@ -36,7 +36,7 @@
+         for char in key:
+             current = current.setdefault(char, {})
+ 
+-        current[0] = True
++        current[1] = True
+ 
+     return trie
+ 

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7587,7 +7587,7 @@
+         if fn_syntax:
+             self._match(TokenType.R_BRACE)
+ 
+-        return func
++        return None
+ 
+     def _parse_function_args(self, alias: bool = False) -> list[exp.Expr]:
+         return self._parse_csv(lambda: self._parse_lambda(alias=alias))

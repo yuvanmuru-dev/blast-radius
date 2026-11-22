@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2484,7 +2484,7 @@
+         if self._match_text_seq("WHILE"):
+             return self._parse_whileblock()
+ 
+-        if self._is_table_query():
++        if not self._is_table_query():
+             return self._parse_select()
+ 
+         expression = self._parse_expression()

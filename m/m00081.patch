@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2315,7 +2315,7 @@
+         while self._chunk_index < chunks_length:
+             self._advance_chunk()
+ 
+-            if self._match(TokenType.ELSE, advance=False):
++            if self._match(TokenType.ELSE, advance=True):
+                 return expressions
+ 
+             if expressions and not self._next and self._match(TokenType.END):

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -925,7 +925,7 @@
+ 
+     @property
+     def is_number(self) -> bool:
+-        return (isinstance(self, Literal) and not self.args["is_string"]) or (
++        return (isinstance(self, Literal) or not self.args["is_string"]) or (
+             isinstance(self, Neg) and self.this.is_number
+         )
+ 

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2294,7 +2294,7 @@
+     ) -> E:
+         if token:
+             instance.update_positions(token)
+-        instance.add_comments(comments) if comments else self._add_comments(instance)
++        instance.add_comments(comments) if not comments else self._add_comments(instance)
+         if not instance.is_primitive:
+             instance = self.validate_expression(instance)
+         return instance

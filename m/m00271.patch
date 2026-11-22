@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6751,7 +6751,7 @@
+         return this
+ 
+     def _parse_factor_operand(self) -> exp.Expr | None:
+-        return self._parse_exponent() if self.EXPONENT else self._parse_unary()
++        return None._parse_exponent() if self.EXPONENT else self._parse_unary()
+ 
+     def _parse_exponent(self) -> exp.Expr | None:
+         this = self._parse_unary()

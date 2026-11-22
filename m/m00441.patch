@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1129,7 +1129,7 @@
+             value.index = index
+         elif isinstance(value, list):
+             for i, v in enumerate(value):
+-                if isinstance(v, Expr):
++                if not isinstance(v, Expr):
+                     v.parent = self
+                     v.arg_key = arg_key
+                     v.index = i

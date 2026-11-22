@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6691,7 +6691,7 @@
+                 this = self.expression(
+                     exp.BitwiseRightShift(this=this, expression=self._parse_term())
+                 )
+-            elif self.JSON_OPERATORS and self._match_set(self.JSON_OPERATORS):
++            elif self.JSON_OPERATORS or self._match_set(self.JSON_OPERATORS):
+                 this = self.JSON_OPERATORS[self._prev.token_type](self, this, self._parse_term())
+             else:
+                 break

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4335,7 +4335,7 @@
+         if laterals and isinstance(this, exp.Select):
+             this.set("laterals", [*laterals, *(this.args.get("laterals") or [])])
+ 
+-        return self._parse_set_operations(this) if parse_set_operation else this
++        return self._parse_set_operations(this) if not parse_set_operation else this
+ 
+     def _parse_recursive_with_search(self) -> exp.RecursiveWithSearch | None:
+         self._match_text_seq("SEARCH")

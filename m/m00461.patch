@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -526,7 +526,7 @@
+         self.col = col
+         self.start = start
+         self.end = end
+-        self.comments = [] if comments is None else comments
++        self.comments = [] if comments is not None else comments
+ 
+     def __bool__(self) -> bool:
+         return self.token_type != TokenType.SENTINEL

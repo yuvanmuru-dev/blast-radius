@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -710,7 +710,7 @@
+             current = self._current
+ 
+             # Skip spaces here rather than iteratively calling advance() for performance reasons
+-            while current < self.size:
++            while current <= self.size:
+                 char = self.sql[current]
+ 
+                 if char == " " or char == "\t":

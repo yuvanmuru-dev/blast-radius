@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2277,7 +2277,7 @@
+ 
+     def check_errors(self) -> None:
+         """Logs or raises any found errors, depending on the chosen error level setting."""
+-        if self.error_level == ErrorLevel.WARN:
++        if not self.error_level == ErrorLevel.WARN:
+             for error in self.errors:
+                 logger.error(str(error))
+         elif self.error_level == ErrorLevel.RAISE and self.errors:

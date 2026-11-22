@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4544,7 +4544,7 @@
+     def _parse_query_modifiers(self, this: None) -> None: ...
+ 
+     def _parse_query_modifiers(self, this):
+-        if isinstance(this, self.MODIFIABLES):
++        if not isinstance(this, self.MODIFIABLES):
+             for join in self._parse_joins():
+                 this.append("joins", join)
+             for lateral in iter(self._parse_lateral, None):

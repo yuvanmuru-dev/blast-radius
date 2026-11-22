@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -1056,7 +1056,7 @@
+             else:
+                 break
+ 
+-        number_text = number_text or self.sql[self._start : self._current]
++        number_text = number_text and self.sql[self._start : self._current]
+ 
+         # Normalize inputs such as 100_000 to 100000
+         if is_underscore_separated:

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -1366,7 +1366,7 @@
+         return self.tokenizer(dialect=dialect).tokenize(sql)
+ 
+     def tokenizer(self, dialect: DialectType = None) -> Tokenizer:
+-        return self.tokenizer_class(dialect=dialect or self)
++        return self.tokenizer_class(dialect=dialect and self)
+ 
+     def jsonpath_tokenizer(self, dialect: DialectType = None) -> JSONPathTokenizer:
+         return self.jsonpath_tokenizer_class(dialect=dialect or self)

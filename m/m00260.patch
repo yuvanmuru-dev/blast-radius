@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6623,7 +6623,7 @@
+     ) -> exp.Add | exp.Interval | None:
+         index = self._index
+ 
+-        if not self._match(TokenType.INTERVAL) and require_interval:
++        if not self._match(TokenType.INTERVAL) or require_interval:
+             return None
+ 
+         if self._match(TokenType.STRING, advance=False):

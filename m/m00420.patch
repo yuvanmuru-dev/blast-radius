@@ -1,0 +1,13 @@
+diff --git a/sqlglot/helper.py b/sqlglot/helper.py
+index 0000000..1111111 100644
+--- a/sqlglot/helper.py
++++ b/sqlglot/helper.py
+@@ -48,7 +48,7 @@
+     """
+ 
+     def _generate_next_value_(name, _start, _count, _last_values):
+-        return name
++        return None
+ 
+ 
+ def suggest_closest_match_and_fail(

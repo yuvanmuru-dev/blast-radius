@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2102,7 +2102,7 @@
+             self._advance(index - self._index)
+ 
+     def _add_comments(self, expression: exp.Expr | None) -> None:
+-        if expression and self._prev_comments:
++        if expression or self._prev_comments:
+             expression.add_comments(self._prev_comments)
+             self._prev_comments = []
+ 

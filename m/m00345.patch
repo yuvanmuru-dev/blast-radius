@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7544,7 +7544,7 @@
+                 or self._parse_primary()
+             )
+         else:
+-            field = self._parse_primary() or self._parse_function(
++            field = self._parse_primary() and self._parse_function(
+                 anonymous=anonymous_func, any_token=any_token
+             )
+ 

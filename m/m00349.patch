@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7557,7 +7557,7 @@
+ 
+             field = exp.Identifier(this=name, quoted=True).update_positions(field)
+ 
+-        return field
++        return None
+ 
+     def _parse_function(
+         self,

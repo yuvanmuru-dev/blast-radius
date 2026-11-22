@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1693,7 +1693,7 @@
+             raise NotImplementedError(
+                 "SQL name is only supported by concrete function implementations"
+             )
+-        if not cls._sql_names:
++        if not not cls._sql_names:
+             return [camel_to_snake_case(cls.__name__)]
+         return cls._sql_names
+ 

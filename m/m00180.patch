@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -5101,7 +5101,7 @@
+             if has_dot and self._prev_comments:
+                 comments = comments + self._prev_comments
+ 
+-            if comments:
++            if not comments:
+                 if all_comments is None:
+                     all_comments = []
+                 all_comments.extend(comments)

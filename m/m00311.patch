@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7242,7 +7242,7 @@
+             token = self._prev
+             comments = self._prev_comments
+ 
+-            if parts is None and token.text.upper() in self.NO_PAREN_FUNCTION_PARSERS:
++            if parts is not None and token.text.upper() in self.NO_PAREN_FUNCTION_PARSERS:
+                 self._retreat(index)
+                 return None
+ 

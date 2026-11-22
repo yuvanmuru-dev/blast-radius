@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4284,7 +4284,7 @@
+             this.comments = comments
+ 
+             into = self._parse_into()
+-            if into:
++            if not into:
+                 this.set("into", into)
+ 
+             if not from_:

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4866,7 +4866,7 @@
+         parse_bracket: bool = False,
+         alias_tokens: t.Collection[TokenType] | None = None,
+     ) -> exp.Join | None:
+-        if self._match(TokenType.COMMA):
++        if not self._match(TokenType.COMMA):
+             table = self._try_parse(lambda: self._parse_table(alias_tokens=alias_tokens))
+             cross_join = self.expression(exp.Join(this=table)) if table else None
+ 

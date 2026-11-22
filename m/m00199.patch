@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -5224,7 +5224,7 @@
+     ) -> exp.Expr | None:
+         if not schema and not is_db_reference and not consume_pipe and not joins:
+             index = self._index
+-            table = self._parse_table_parts(fast=True)
++            table = self._parse_table_parts(fast=False)
+ 
+             if table is not None:
+                 curr_tt = self._curr.token_type

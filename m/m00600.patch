@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -364,7 +364,7 @@
+                 (
+                     (s, e)
+                     for s, (e, t) in klass.tokenizer_class._FORMAT_STRINGS.items()
+-                    if t == token_type
++                    if t != token_type
+                 ),
+                 (None, None),
+             )

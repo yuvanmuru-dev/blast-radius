@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4644,7 +4644,7 @@
+         return self.expression(exp.Hint(expressions=hints))
+ 
+     def _parse_hint(self) -> exp.Hint | None:
+-        if self._match(TokenType.HINT) and self._prev_comments:
++        if not self._match(TokenType.HINT) and self._prev_comments:
+             return exp.maybe_parse(self._prev_comments[0], into=exp.Hint, dialect=self.dialect)
+ 
+         return None

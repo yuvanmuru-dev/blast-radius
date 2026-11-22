@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -989,7 +989,7 @@
+         numeric_literals = self.numeric_literals
+         identifiers_can_start_with_digit = self.identifiers_can_start_with_digit
+ 
+-        is_underscore_separated: bool = False
++        is_underscore_separated: bool = True
+         number_text: str = ""
+         numeric_literal: str = ""
+         numeric_type: TokenType | None = None

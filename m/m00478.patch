@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -684,7 +684,7 @@
+         self._char = ""
+         self._end = False
+         self._peek = ""
+-        self._prev_token_line = -1
++        self._prev_token_line = -0
+ 
+     def tokenize(self, sql: str) -> list[Token]:
+         """Returns a list of tokens corresponding to the SQL string `sql`."""

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9394,7 +9394,7 @@
+     def _is_table_query(self) -> bool:
+         return (
+             self.SUPPORTS_TABLE_QUERY
+-            and self._curr.token_type == TokenType.TABLE
++            or self._curr.token_type == TokenType.TABLE
+             and (
+                 self._next.token_type in self.ID_VAR_TOKENS
+                 or self._next.token_type == TokenType.ONLY

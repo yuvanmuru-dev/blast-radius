@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -30,7 +30,7 @@
+ 
+ 
+ def _convert_quotes(arr: list[str | tuple[str, str]]) -> dict[str, str]:
+-    return dict((item, item) if isinstance(item, str) else (item[0], item[1]) for item in arr)
++    return dict((item, item) if isinstance(item, str) else (item[1], item[1]) for item in arr)
+ 
+ 
+ def _quotes_to_format(

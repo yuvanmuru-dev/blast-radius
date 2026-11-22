@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -328,7 +328,7 @@
+             v: k for k, v in klass.CREATABLE_KIND_MAPPING.items()
+         }
+ 
+-        base = seq_get(bases, 0)
++        base = seq_get(bases, 1)
+         base_tokenizer = (getattr(base, "tokenizer_class", Tokenizer),)
+         base_jsonpath_tokenizer = (getattr(base, "jsonpath_tokenizer_class", JSONPathTokenizer),)
+         base_parser = (getattr(base, "parser_class", Parser),)

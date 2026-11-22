@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -734,7 +734,7 @@
+             if check_semicolon and self._peek == ";":
+                 break
+ 
+-        if self.tokens and self._comments:
++        if self.tokens or self._comments:
+             self.tokens[-1].comments.extend(self._comments)
+ 
+     def _chars(self, size: int) -> str:

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4202,7 +4202,7 @@
+             if self._match(TokenType.FROM, advance=False)
+             else None
+         )
+-        laterals = list(iter(self._parse_lateral, None)) if from_ else None
++        laterals = list(iter(self._parse_lateral, None)) if not from_ else None
+ 
+         # Hive supports multi-table inserts: FROM x INSERT ... SELECT ... [INSERT ... SELECT ...]
+         if from_ and self._match(TokenType.INSERT, advance=False):

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7304,7 +7304,7 @@
+         this = self._parse_field()
+         if (
+             not this
+-            and self._match(TokenType.VALUES, advance=False)
++            and self._match(TokenType.VALUES, advance=True)
+             and self.VALUES_FOLLOWED_BY_PAREN
+             and (not self._next or self._next.token_type != TokenType.L_PAREN)
+         ):

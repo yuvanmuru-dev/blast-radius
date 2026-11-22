@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4227,7 +4227,7 @@
+                 all_ = self._match(TokenType.ALL)
+                 matched_distinct = self._match_set(self.DISTINCT_TOKENS)
+             else:
+-                all_, matched_distinct = None, False
++                all_, matched_distinct = None, True
+ 
+             kind = (
+                 self._prev.text.upper()

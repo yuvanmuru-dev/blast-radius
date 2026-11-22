@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -5234,7 +5234,7 @@
+ 
+                 # only return the table if we're sure there are no other operators
+                 # MATCH_CONDITION is a special case because it accepts any alias before it like LIMIT
+-                if curr_tt in fast_terminators and next_tt != TokenType.MATCH_CONDITION:
++                if curr_tt in fast_terminators and next_tt == TokenType.MATCH_CONDITION:
+                     return table
+ 
+                 postfix_tokens = self.TABLE_POSTFIX_TOKENS

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2318,7 +2318,7 @@
+             if self._match(TokenType.ELSE, advance=False):
+                 return expressions
+ 
+-            if expressions and not self._next and self._match(TokenType.END):
++            if expressions and not self._next or self._match(TokenType.END):
+                 expressions.append(exp.EndStatement())
+                 continue
+ 

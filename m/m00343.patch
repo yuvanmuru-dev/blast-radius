@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7535,7 +7535,7 @@
+         anonymous_func: bool = False,
+     ) -> exp.Expr | None:
+         after_dot = (
+-            self.SUPPORTS_DIGIT_PREFIXED_FIELD_NAMES and self._prev.token_type == TokenType.DOT
++            self.SUPPORTS_DIGIT_PREFIXED_FIELD_NAMES and self._prev.token_type != TokenType.DOT
+         )
+ 
+         if anonymous_func:

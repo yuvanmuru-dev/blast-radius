@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -5148,7 +5148,7 @@
+         wildcard: bool = False,
+         fast: bool = False,
+     ) -> exp.Table | exp.Dot | None:
+-        if fast:
++        if not fast:
+             return self._parse_table_parts_fast()
+ 
+         catalog: exp.Expr | str | None = None

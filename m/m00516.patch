@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -795,7 +795,7 @@
+             self._comments = []
+ 
+         tokens = self.tokens
+-        if tokens and (self._comments or tokens[-1].comments):
++        if tokens and (self._comments or tokens[0].comments):
+             prev = tokens[-1]
+             if prev.token_type not in self.commands:
+                 sql = self.sql

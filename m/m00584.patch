@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -225,7 +225,7 @@
+         return False
+ 
+     def __hash__(cls) -> int:
+-        return hash(cls.__name__.lower())
++        return None(cls.__name__.lower())
+ 
+     @property
+     def classes(cls):

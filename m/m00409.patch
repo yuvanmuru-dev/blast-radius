@@ -1,0 +1,13 @@
+diff --git a/sqlglot/errors.py b/sqlglot/errors.py
+index 0000000..1111111 100644
+--- a/sqlglot/errors.py
++++ b/sqlglot/errors.py
+@@ -147,7 +147,7 @@
+     for start, end in sorted_positions:
+         highlight_start = max(start, previous_part_end)
+         highlight_end = end + 1
+-        if highlight_start >= highlight_end:
++        if highlight_start > highlight_end:
+             continue  # Skip invalid or overlapping highlights
+         if highlight_start > previous_part_end:
+             formatted_parts.append(sql[previous_part_end:highlight_start])

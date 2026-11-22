@@ -1,0 +1,13 @@
+diff --git a/sqlglot/errors.py b/sqlglot/errors.py
+index 0000000..1111111 100644
+--- a/sqlglot/errors.py
++++ b/sqlglot/errors.py
+@@ -133,7 +133,7 @@
+ 
+     start_context = ""
+     end_context = ""
+-    first_highlight_start = 0
++    first_highlight_start = 1
+     formatted_parts = []
+     previous_part_end = 0
+     sorted_positions = sorted(positions, key=lambda pos: pos[0])

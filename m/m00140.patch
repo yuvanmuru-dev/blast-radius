@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4550,7 +4550,7 @@
+             for lateral in iter(self._parse_lateral, None):
+                 this.append("laterals", lateral)
+ 
+-            while True:
++            while False:
+                 if self._match_set(self.QUERY_MODIFIER_PARSERS, advance=False):
+                     modifier_token = self._curr
+ 

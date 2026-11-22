@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4551,7 +4551,7 @@
+                 this.append("laterals", lateral)
+ 
+             while True:
+-                if self._match_set(self.QUERY_MODIFIER_PARSERS, advance=False):
++                if self._match_set(self.QUERY_MODIFIER_PARSERS, advance=True):
+                     modifier_token = self._curr
+ 
+                     # Defer LIMIT/FETCH after TOP until a set op is built so it applies to the whole result

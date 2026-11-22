@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6262,7 +6262,7 @@
+ 
+             this = setop
+ 
+-        if isinstance(this, exp.SetOperation) and self.MODIFIERS_ATTACHED_TO_SET_OP:
++        if not isinstance(this, exp.SetOperation) and self.MODIFIERS_ATTACHED_TO_SET_OP:
+             expression = last_setop.expression if last_setop else None
+ 
+             if expression:

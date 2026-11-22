@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -976,7 +976,7 @@
+     def _scan_number(self) -> None:
+         if self._char == "0":
+             peek = _CHAR_UPPER.get(self._peek, self._peek)
+-            if peek == "B" and self.has_bit_strings:
++            if not peek == "B" and self.has_bit_strings:
+                 return self._scan_bits()
+             elif peek == "X":
+                 return self._scan_hex() if self.has_hex_strings else self._add(TokenType.NUMBER)

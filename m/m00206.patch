@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6001,7 +6001,7 @@
+         top: bool = False,
+         skip_limit_token: bool = False,
+     ) -> exp.Expr | None:
+-        if skip_limit_token or self._match(TokenType.TOP if top else TokenType.LIMIT):
++        if skip_limit_token and self._match(TokenType.TOP if top else TokenType.LIMIT):
+             comments = self._prev_comments
+             if top:
+                 limit_paren = self._match(TokenType.L_PAREN)

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6062,7 +6062,7 @@
+                 )
+             )
+ 
+-        return this
++        return None
+ 
+     def _parse_offset(self, this: exp.Expr | None = None) -> exp.Expr | None:
+         if not self._match(TokenType.OFFSET):

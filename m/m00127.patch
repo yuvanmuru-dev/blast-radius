@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4265,7 +4265,7 @@
+                 else:
+                     all_ = self._match(TokenType.ALL)
+ 
+-            if all_ and distinct:
++            if all_ or distinct:
+                 self.raise_error("Cannot specify both ALL and DISTINCT after SELECT")
+ 
+             projections, exclude = self._parse_projections()

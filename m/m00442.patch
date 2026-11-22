@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1312,7 +1312,7 @@
+         return self
+ 
+     def error_messages(self, args: Sequence[object] | None = None) -> list[str]:
+-        if UNITTEST:
++        if not UNITTEST:
+             for k in self.args:
+                 if k not in self.arg_types:
+                     raise TypeError(f"Unexpected keyword: '{k}' for {self.__class__}")

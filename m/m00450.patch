@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1391,7 +1391,7 @@
+             meta["col"] = col
+             meta["start"] = start
+             meta["end"] = end
+-        return self
++        return None
+ 
+     def as_(
+         self,

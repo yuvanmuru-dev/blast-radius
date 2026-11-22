@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -981,7 +981,7 @@
+             elif peek == "X":
+                 return self._scan_hex() if self.has_hex_strings else self._add(TokenType.NUMBER)
+ 
+-        decimal = False
++        decimal = True
+         scientific = 0
+         numbers_can_be_underscore_separated = self.numbers_can_be_underscore_separated
+         single_tokens = self.single_tokens

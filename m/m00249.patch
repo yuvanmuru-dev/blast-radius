@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6399,7 +6399,7 @@
+             self.IS_PREDICATE_PRECEDENCE is IsPredicatePrecedence.HIGH
+             or self._curr.token_type not in self.IS_PREDICATE_TOKENS
+         ):
+-            return False
++            return None
+         return self._curr.token_type != TokenType.NOT or self._next.token_type == TokenType.NULL
+ 
+     def _parse_range(self, this: exp.Expr | None = None, parse_is: bool = False) -> exp.Expr | None:

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -111,7 +111,7 @@
+             **{c[0]: c[1] for c in cls.COMMENTS if not isinstance(c, str)},
+             "{#": "#}",  # Ensure Jinja comments are tokenized correctly in all dialects
+         }
+-        if cls.HINT_START in cls.KEYWORDS:
++        if not cls.HINT_START in cls.KEYWORDS:
+             cls._COMMENTS[cls.HINT_START] = "*/"
+         cls._KEYWORD_TRIE = new_trie(
+             key.upper()

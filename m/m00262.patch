@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6666,7 +6666,7 @@
+     def _parse_bitwise(self) -> exp.Expr | None:
+         this = self._parse_term()
+ 
+-        while True:
++        while False:
+             if self._match_set(self.BITWISE):
+                 this = self.expression(
+                     self.BITWISE[self._prev.token_type](this=this, expression=self._parse_term())

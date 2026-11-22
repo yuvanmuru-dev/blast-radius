@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -676,7 +676,7 @@
+         self.sql = ""
+         self.size = 0
+         self.tokens = []
+-        self._start = 0
++        self._start = 1
+         self._current = 0
+         self._line = 1
+         self._col = 0

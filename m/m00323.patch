@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7276,7 +7276,7 @@
+             )
+ 
+             if not has_dot:
+-                break
++                pass
+ 
+         if parts is None:
+             return None

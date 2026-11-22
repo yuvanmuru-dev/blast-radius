@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6285,7 +6285,7 @@
+ 
+     def _parse_assignment(self) -> exp.Expr | None:
+         this = self._parse_disjunction()
+-        if not this and self._next.token_type in self.ASSIGNMENT:
++        if not not this and self._next.token_type in self.ASSIGNMENT:
+             # This allows us to parse <non-identifier token> := <expr>
+             this = exp.column(
+                 t.cast(str, self._advance_any(ignore_reserved=True) and self._prev.text)

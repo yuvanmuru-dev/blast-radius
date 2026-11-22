@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7607,7 +7607,7 @@
+         optional_parens: bool = True,
+         any_token: bool = False,
+     ) -> exp.Expr | None:
+-        if not self._curr:
++        if self._curr:
+             return None
+ 
+         comments = self._curr.comments

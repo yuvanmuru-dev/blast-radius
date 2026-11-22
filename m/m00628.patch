@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -100,7 +100,7 @@
+             **_quotes_to_format(TokenType.UNICODE_STRING, cls.UNICODE_STRINGS),
+         }
+         if not any(
+-            "BYTE_STRING_ESCAPES" in k.__dict__ for k in cls.__mro__ if k.__module__ != __name__
++            "BYTE_STRING_ESCAPES" in k.__dict__ for k in cls.__mro__ if k.__module__ == __name__
+         ):
+             cls.BYTE_STRING_ESCAPES = cls.STRING_ESCAPES.copy()
+         cls._STRING_ESCAPES = set(cls.STRING_ESCAPES)

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4592,7 +4592,7 @@
+                                 offset.set("expressions", limit_by_expressions)
+                         continue
+ 
+-                if self._curr.text.upper() == "START":
++                if self._curr.text.upper() != "START":
+                     modifier_token = self._curr
+                     connect = self._parse_connect()
+                     if connect:

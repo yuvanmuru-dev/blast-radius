@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -6096,7 +6096,7 @@
+         # `WINDOW` is in ID_VAR_TOKENS so it could be mistakenly consumed as an implicit alias.
+         # Refuse only when the following tokens look like a named-window clause: `WINDOW <id> AS (`.
+         if not self._match(TokenType.WINDOW, advance=False):
+-            return False
++            return None
+ 
+         name = self._tokens[self._index + 1] if self._index + 1 < len(self._tokens) else None
+         if name is None or name.token_type not in self.ID_VAR_TOKENS:

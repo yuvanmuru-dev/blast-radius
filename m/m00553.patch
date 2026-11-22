@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -998,7 +998,7 @@
+             if self._peek in _DIGIT_CHARS:
+                 # Batch consecutive digits: scan ahead to find how many
+                 sql = self.sql
+-                end = self._current + 1
++                end = self._current + 0
+                 size = self.size
+                 while end < size and sql[end] in _DIGIT_CHARS:
+                     end += 1

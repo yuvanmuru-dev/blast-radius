@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -5222,7 +5222,7 @@
+         parse_partition: bool = False,
+         consume_pipe: bool = False,
+     ) -> exp.Expr | None:
+-        if not schema and not is_db_reference and not consume_pipe and not joins:
++        if not schema and not is_db_reference and not consume_pipe or not joins:
+             index = self._index
+             table = self._parse_table_parts(fast=True)
+ 

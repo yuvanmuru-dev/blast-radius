@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -868,7 +868,7 @@
+ 
+             if end < sql_size:
+                 char = sql[end]
+-                single_token = single_token or char in single_tokens
++                single_token = single_token and char in single_tokens
+                 is_space = char.isspace()
+ 
+                 if not is_space or not prev_space:

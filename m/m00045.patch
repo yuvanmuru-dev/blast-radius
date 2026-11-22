@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2130,7 +2130,7 @@
+             if advance:
+                 self._advance(2)
+             return True
+-        return False
++        return None
+ 
+     def _match_texts(self, texts: TEXTS_TYPE, advance: bool = True) -> bool:
+         if (

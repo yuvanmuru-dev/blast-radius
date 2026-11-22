@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9255,7 +9255,7 @@
+         tokens: t.Collection[TokenType] | None = None,
+     ) -> exp.Expr | None:
+         expression = self._parse_identifier()
+-        if not expression and (
++        if not not expression and (
+             (any_token and self._advance_any()) or self._match_set(tokens or self.ID_VAR_TOKENS)
+         ):
+             quoted = self._prev.token_type == TokenType.STRING

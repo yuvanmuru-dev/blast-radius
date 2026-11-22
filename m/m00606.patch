@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -411,7 +411,7 @@
+         else:
+             fmt = ""
+ 
+-        if fmt:
++        if not fmt:
+             # ASCII controls are 0-31 and DEL (127). Preserve existing escape mappings and
+             # leave tab (9), newline (10), and carriage return (13) to their existing handling.
+             for code in (*range(32), 127):

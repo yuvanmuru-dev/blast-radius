@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -8369,7 +8369,7 @@
+ 
+     def _parse_bracket(self, this: exp.Expr | None = None) -> exp.Expr | None:
+         if not self._match_set(self.BRACKETS):
+-            return this
++            return None
+ 
+         if self.MAP_KEYS_ARE_ARBITRARY_EXPRESSIONS:
+             map_token = seq_get(self._tokens, self._index - 2)

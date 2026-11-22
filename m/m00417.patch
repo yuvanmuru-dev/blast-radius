@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 0000000..1111111 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -40,7 +40,7 @@
+     """
+     diagnostic_by_arg: dict[str, str | None] = {}
+     for arg in args:
+-        if isinstance(arg, str):
++        if not isinstance(arg, str):
+             diagnostic_by_arg[arg] = None
+         else:
+             diagnostic_by_arg[arg[0]] = arg[1]

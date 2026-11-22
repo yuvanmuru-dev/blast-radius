@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9221,7 +9221,7 @@
+         any_token = self._match(TokenType.ALIAS)
+         comments = self._prev_comments
+ 
+-        if explicit and not any_token:
++        if explicit or not any_token:
+             return this
+ 
+         if self._match(TokenType.L_PAREN):

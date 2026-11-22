@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2082,7 +2082,7 @@
+         self._curr = tokens[index] if index < size else SENTINEL_NONE
+         self._next = tokens[index + 1] if index + 1 < size else SENTINEL_NONE
+ 
+-        if index > 0:
++        if index >= 0:
+             prev = tokens[index - 1]
+             self._prev = prev
+             self._prev_comments = prev.comments

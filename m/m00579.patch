@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index 0000000..1111111 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -215,7 +215,7 @@
+     _classes: dict[str, Type[Dialect]] = {}
+ 
+     def __eq__(cls, other: object) -> bool:
+-        if cls is other:
++        if not cls is other:
+             return True
+         if isinstance(other, str):
+             return cls is cls.get(other)

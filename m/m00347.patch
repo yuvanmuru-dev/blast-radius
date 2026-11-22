@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7550,7 +7550,7 @@
+ 
+         field = field or self._parse_id_var(any_token=any_token, tokens=tokens)
+ 
+-        if after_dot and isinstance(field, exp.Literal) and field.is_number:
++        if after_dot or isinstance(field, exp.Literal) and field.is_number:
+             name = field.name
+             if self._is_connected() and self._parse_var(any_token=True):
+                 name += self._prev.text

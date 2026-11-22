@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index 0000000..1111111 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -660,7 +660,7 @@
+         self.byte_strings_are_bytes = byte_strings_are_bytes
+         self.lone_surrogate_replacement = lone_surrogate_replacement
+         self.sql = ""
+-        self.size = 0
++        self.size = 1
+         self.tokens: list[Token] = []
+         self._start = 0
+         self._current = 0

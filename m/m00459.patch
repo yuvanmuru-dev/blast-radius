@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 0000000..1111111 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1787,7 +1787,7 @@
+         return self.name
+ 
+     def to_py(self) -> int | str | Decimal:
+-        if self.is_number:
++        if not self.is_number:
+             try:
+                 return int(self.this)
+             except ValueError:

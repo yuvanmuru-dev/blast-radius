@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9234,7 +9234,7 @@
+             self._match_r_paren(aliases)
+             return aliases
+ 
+-        alias = self._parse_id_var(any_token, tokens=self.ALIAS_TOKENS) or (
++        alias = self._parse_id_var(any_token, tokens=self.ALIAS_TOKENS) and (
+             self.STRING_ALIASES and self._parse_string_as_identifier()
+         )
+ 

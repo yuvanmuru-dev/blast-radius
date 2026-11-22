@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -7617,7 +7617,7 @@
+         this: str | exp.Expr = self._curr.text
+         upper = self._curr.text.upper()
+ 
+-        after_dot = prev.token_type == TokenType.DOT
++        after_dot = prev.token_type != TokenType.DOT
+         parser = self.NO_PAREN_FUNCTION_PARSERS.get(upper)
+         if (
+             optional_parens

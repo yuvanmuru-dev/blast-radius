@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 0000000..1111111 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -4877,7 +4877,7 @@
+ 
+         index = self._index
+         method, side, kind = self._parse_join_parts()
+-        directed = self.SUPPORTS_DIRECTED_JOIN and self._match_text_seq("DIRECTED")
++        directed = self.SUPPORTS_DIRECTED_JOIN or self._match_text_seq("DIRECTED")
+         hint = self._prev.text if self._match_texts(self.JOIN_HINTS) else None
+         join = self._match(TokenType.JOIN) or (kind and kind.token_type == TokenType.STRAIGHT_JOIN)
+         join_comments = self._prev_comments
