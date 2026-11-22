@@ -534,7 +534,7 @@ VERIFY = os.environ.get("BR_VERIFY", "0") == "1"
 CPU_FACTOR = float(os.environ.get("BR_CPUF", "3.0"))  # judge CPU seconds per local second (measured)
 
 
-PARTIAL = os.environ.get("BR_PARTIAL", "1") == "1"
+PARTIAL = os.environ.get("BR_PARTIAL", "0") == "1"
 UNITS_FILE = Path(os.environ.get("BR_UNITS", str(HERE.parent / "maps" / "units.json.gz")))
 HEAVY_ATTR = {"test_execute_tpcds": "tpcds_sqls", "test_execute_tpch": "tpch_sqls", "test_optimized_tpch": "tpch_sqls"}
 _UNITS = [None]
@@ -613,6 +613,68 @@ def partial_heavy(ctx, cid, text, sel, dur, deadline):
     return set(sel) - dropped
 
 
+PROBE = os.environ.get("BR_PROBE", "1") == "1"
+PROBES = {"tests/test_parser.py::TestParser::test_max_nodes": "probe_maxnodes.py"}
+PROBE_BASE = Path(os.environ.get("BR_PROBE_BASE", str(HERE.parent / "maps" / "probe_base.json")))
+_PB = {}
+
+
+def _probe_out(script, root):
+    import subprocess
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    env.update(PYTHONHASHSEED="0", PYTHONDONTWRITEBYTECODE="1")
+    try:
+        r = subprocess.run([sys.executable, "-S", str(HERE / script)], cwd=str(root), env=env,
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60)
+    except Exception:
+        return None
+    out = r.stdout.decode("utf-8", "replace")
+    return out if r.returncode == 0 and out.strip() else None
+
+
+def _probe_base(script):
+    if script not in _PB:
+        b = None
+        try:
+            b = json.loads(PROBE_BASE.read_text()).get(script)
+        except Exception:
+            pass
+        _PB[script] = b if b is not None else _probe_out(script, SRC)
+    return _PB[script]
+
+
+def probe_heavy(ctx, cid, text, sel, dur):
+    """Very slow tests with a scaled stand-in: drop the test when the patched
+    tree behaves exactly like the pristine one on the stand-in."""
+    if not PROBE or not sel:
+        return sel
+    ids = {x["number"]: x["id"] for x in ctx.tests}
+    cands = [n for n in sel if ids[n] in PROBES]
+    if not cands:
+        return sel
+    files = patched_files(text)
+    if not files or any(not p.startswith("sqlglot/") for p in files):
+        return sel
+    before = cost_ms(pack(sorted(sel), dur), dur)
+    after = cost_ms(pack(sorted(set(sel) - set(cands)), dur), dur)
+    if before - after < CPU_FACTOR * 1000:
+        return sel
+    ov = verify.build_overlay(SRC, "/tmp/ov", files)
+    drop = set()
+    try:
+        for n in cands:
+            script = PROBES[ids[n]]
+            base = _probe_base(script)
+            out = _probe_out(script, ov)
+            if base is not None and out is not None and out == base:
+                drop.add(n)
+    finally:
+        import shutil
+        shutil.rmtree(ov, ignore_errors=True)
+    log(cid, "probe", [ids[n].rsplit("::", 1)[1] for n in cands], "dropped", len(drop))
+    return set(sel) - drop
+
+
 def cost_ms(workers, dur):
     return (max(sum(dur[n] for n in w) for w in workers) + WORKER_MS * len(workers)) if workers else 0
 
@@ -665,6 +727,11 @@ def main():
                     sel = partial_heavy(ctx, cid, text, sel, dur, deadline)
                 except Exception as e:
                     log(cid, "partial error", repr(e))
+            if sel != ALL:
+                try:
+                    sel = probe_heavy(ctx, cid, text, sel, dur)
+                except Exception as e:
+                    log(cid, "probe error", repr(e))
             if sel != ALL:
                 try:
                     sel = maybe_verify(ctx, cid, text, sel, dur, deadline)

@@ -27,4 +27,18 @@ os.environ["BR_IMPORTERS"] = "/nonexistent"
 import main as _m
 _m.affected_modules([])
 Path(out).with_name("importers.json").write_text(json.dumps({k: sorted(v) for k, v in _m._IMPORTERS[0].items()}))
-print("fp_base ok:", len(a["fp"]), "keys")
+# baselines of the scaled stand-ins for very slow tests, taken in the same
+# overlay layout the runtime uses (run twice, must match)
+pb = {}
+for script in sorted(set(_m.PROBES.values())):
+    outs = []
+    for i in range(2):
+        ov = verify.build_overlay(src, "/tmp/ov", {})
+        outs.append(_m._probe_out(script, ov))
+    if outs[0] is None or outs[0] != outs[1]:
+        sys.exit(f"probe {script} not stable")
+    pb[script] = outs[0]
+import shutil
+shutil.rmtree("/tmp/ov", ignore_errors=True)
+Path(out).with_name("probe_base.json").write_text(json.dumps(pb))
+print("fp_base ok:", len(a["fp"]), "keys;", "probes", sorted(pb))
