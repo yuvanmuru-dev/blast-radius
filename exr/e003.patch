@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -373,7 +373,7 @@
+                 results[key][0].append((index, reader.row))
+         for index, (reader, ctx) in enumerate(join_context):
+             key = ctx.eval_tuple(join_key)
+-            if all(value is not None for value in key):
++            if all(value is None for value in key):
+                 results[key][1].append((index, reader.row))
+ 
+         table = Table(source_context.columns + join_context.columns)

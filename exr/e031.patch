@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/table.py b/sqlglot/executor/table.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/table.py
++++ b/sqlglot/executor/table.py
+@@ -128,7 +128,7 @@
+         return {}
+ 
+     depth = dict_depth(d)
+-    if depth > 1:
++    if depth >= 1:
+         return {
+             normalize_name(k, dialect=dialect, is_table=True).name: _ensure_tables(
+                 v, dialect=dialect

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/env.py b/sqlglot/executor/env.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/env.py
++++ b/sqlglot/executor/env.py
+@@ -281,7 +281,7 @@
+     "DOT": null_if_any(lambda e, this: e[this]),
+     "EQ": null_if_any(lambda this, e: this == e),
+     "EXTRACT": null_if_any(lambda this, e: getattr(e, this)),
+-    "GT": null_if_any(lambda this, e: this > e),
++    "GT": null_if_any(lambda this, e: this >= e),
+     "GTE": null_if_any(lambda this, e: this >= e),
+     "IF": lambda predicate, true, false: true if predicate else false,
+     "IN": sql_in,

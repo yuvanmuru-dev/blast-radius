@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -87,7 +87,7 @@
+ 
+     def generate(self, expression):
+         """Convert a SQL expression into literal Python code and compile it into bytecode."""
+-        if not expression:
++        if expression:
+             return None
+ 
+         expression = self._replace_subqueries(expression)

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/table.py b/sqlglot/executor/table.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/table.py
++++ b/sqlglot/executor/table.py
+@@ -106,7 +106,7 @@
+     def __init__(self, columns=None, column_range=None):
+         self.columns = (
+             {column: i for i, column in enumerate(columns) if not column_range or i in column_range}
+-            if columns is not None
++            if columns is None
+             else {}
+         )
+         self.row = ()

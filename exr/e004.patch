@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -232,7 +232,7 @@
+         source = step.source
+ 
+         if source and isinstance(source, exp.Expr):
+-            source = source.name or source.alias
++            source = source.name and source.alias
+ 
+         if source is None:
+             context, table_iter = self.static()

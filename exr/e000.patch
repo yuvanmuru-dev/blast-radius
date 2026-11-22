@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -16,7 +16,7 @@
+ 
+ class PythonExecutor:
+     def __init__(self, env=None, tables=None):
+-        self.generator = Python().generator(identify=True, comments=False)
++        self.generator = Python().generator(identify=True, comments=True)
+         self.env = {**ENV, **(env or {})}
+         self.tables = tables or {}
+         self._subquery_plans = {}

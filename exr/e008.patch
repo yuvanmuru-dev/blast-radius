@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -471,7 +471,7 @@
+                     add_row()
+                     group = key
+                     start = end - 2
+-                if not step.condition and len(table.rows) >= step.offset + step.limit:
++                if not step.condition or len(table.rows) >= step.offset + step.limit:
+                     break
+                 if i == length - 1:
+                     context.set_range(start, end - 1)

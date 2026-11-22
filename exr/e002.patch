@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -477,7 +477,7 @@
+                     context.set_range(start, end - 1)
+                     add_row()
+         elif step.limit > 0 and not group_by:
+-            context.set_range(0, 0)
++            context.set_range(0, 1)
+             table.append(context.eval_tuple(aggregations))
+ 
+         context = self.context({step.name: table, **{name: table for name in context.tables}})

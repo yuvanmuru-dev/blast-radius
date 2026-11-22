@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/table.py b/sqlglot/executor/table.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/table.py
++++ b/sqlglot/executor/table.py
+@@ -19,7 +19,7 @@
+         self.reader: t.Any = RowReader(self.columns, self.column_range)
+         self.rows: t.Any = rows or []
+         if rows:
+-            assert len(rows[0]) == len(self.columns)
++            assert len(rows[1]) == len(self.columns)
+         self.range_reader = RangeReader(self)
+ 
+     def add_columns(self, *columns: str) -> None:

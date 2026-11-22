@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/env.py b/sqlglot/executor/env.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/env.py
++++ b/sqlglot/executor/env.py
+@@ -295,7 +295,7 @@
+     "ILIKE": null_if_any(lambda this, e: _like(this, e, re.IGNORECASE)),
+     "LOWER": null_if_any(lambda arg: arg.lower()),
+     "LT": null_if_any(lambda this, e: this < e),
+-    "LTE": null_if_any(lambda this, e: this <= e),
++    "LTE": null_if_any(lambda this, e: this < e),
+     "MAP": null_if_any(lambda *args: dict(zip(*args))),  # type: ignore
+     "MOD": null_if_any(lambda e, this: e % this),
+     "MUL": null_if_any(lambda e, this: e * this),

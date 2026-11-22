@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/table.py b/sqlglot/executor/table.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/table.py
++++ b/sqlglot/executor/table.py
+@@ -14,7 +14,7 @@
+         rows: t.Any = None,
+         column_range: range | None = None,
+     ) -> None:
+-        self.columns: t.Any = tuple(columns) if columns is not None else ()
++        self.columns: t.Any = tuple(columns) if columns is None else ()
+         self.column_range = column_range
+         self.reader: t.Any = RowReader(self.columns, self.column_range)
+         self.rows: t.Any = rows or []

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/table.py b/sqlglot/executor/table.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/table.py
++++ b/sqlglot/executor/table.py
+@@ -84,7 +84,7 @@
+         return self
+ 
+     def __next__(self) -> RowReader:
+-        self.index += 1
++        self.index += 2
+         if self.index < len(self.table):
+             return self.table[self.index]
+         raise StopIteration

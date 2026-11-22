@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -95,7 +95,7 @@
+         return compile(sql, sql, "eval", optimize=2)
+ 
+     def _replace_subqueries(self, expression):
+-        if not expression.find(*SUBQUERY_NODES):
++        if expression.find(*SUBQUERY_NODES):
+             return expression
+ 
+         expression = expression.copy()

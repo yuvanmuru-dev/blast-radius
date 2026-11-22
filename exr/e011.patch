@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/env.py b/sqlglot/executor/env.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/env.py
++++ b/sqlglot/executor/env.py
+@@ -52,7 +52,7 @@
+         if candidate is None:
+             has_null = True
+         elif value == candidate:
+-            return True
++            return False
+ 
+     return None if has_null else False
+ 
