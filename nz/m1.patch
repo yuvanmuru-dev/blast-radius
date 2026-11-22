@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/normalize.py b/sqlglot/optimizer/normalize.py
+index 0000000..1111111 100644
+--- a/sqlglot/optimizer/normalize.py
++++ b/sqlglot/optimizer/normalize.py
+@@ -114,7 +114,7 @@
+     Returns:
+         The normalization distance.
+     """
+-    total = -(sum(1 for _ in expression.find_all(exp.Connector)) + 1)
++    total = -(sum(1 for _ in expression.find_all(exp.Connector)) - 1)
+ 
+     for length in _predicate_lengths(expression, dnf, max_):
+         total += length
