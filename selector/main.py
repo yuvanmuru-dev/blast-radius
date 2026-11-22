@@ -899,9 +899,12 @@ def diag3_answers(rows, tests, dur):
     fingerprinted file is reported with line 0. Selections are unchanged."""
     tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
     idx = _py_index()
-    out, base, code = [], 0, None
+    want = int(os.environ.get("BR_DIAG_IDX", "0"))
+    out, base, code, seen = [], 0, None, 0
     for cid, nums, is_all, paths, used_fp, dfiles, fpfiles in rows:
-        if code is None and tid in nums:
+        if code is None and tid in nums and seen < want:
+            seen += 1
+        elif code is None and tid in nums:
             hit = next(((p, ln) for p, s, ln in dfiles if s != ALL and tid in s), None)
             if hit is None and fpfiles:
                 hit = (fpfiles[0], 0)
