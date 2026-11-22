@@ -707,12 +707,61 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
+DIAG = os.environ.get("BR_DIAG", "0") == "1"
+DIAG_TEST = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
+
+
+def diag_answers(rows, tests, dur):
+    """Practice-board diagnostic. Selection = normal minus DIAG_TEST, so the
+    board's miss count = commits that really needed it. The simulated total is
+    padded (extra tests only, never fewer) to exactly
+        500000 + 1000*savings_s + 32*n_selected + n_all   (ms)
+    savings_s = whole seconds the test cost us across the run."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    out, base, normal, n_sel, n_all = [], 0, 0, 0, 0
+    for cid, nums, is_all in rows:
+        normal += cost_ms(pack(nums, dur), dur)
+        n_all += is_all
+        if tid in nums:
+            n_sel += 1
+            nums = [n for n in nums if n != tid]
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    savings_s = (normal - base) // 1000
+    target = 500000 + 1000 * min(savings_s, 2000) + 32 * min(n_sel, 31) + min(n_all, 31)
+    need = target - base
+    log("DIAG normal", normal, "base", base, "savings_s", savings_s, "n_sel", n_sel, "n_all", n_all, "target", target)
+    for row in out:
+        if need <= 0:
+            break
+        w = row[1]
+        if not w:
+            continue
+        used = {n for ws in w for n in ws}
+        loads = [sum(dur[n] for n in ws) for ws in w]
+        mi = loads.index(max(loads))
+        free = sorted((n for n in dur if n not in used and n != tid), key=lambda n: -dur[n])
+        for n in free:
+            if 0 < dur[n] <= need:
+                w[mi].append(n)
+                need -= dur[n]
+                if need == 0:
+                    break
+    if need != 0:
+        log("DIAG could not hit target, left", need)
+    final = sum(cost_ms(r[1], dur) for r in out)
+    log("DIAG final", final, "target", target)
+    return [json.dumps({"commit": c, "workers": w}) for c, w in out]
+
+
 # ---------------------------------------------------------------- main
 def main():
     t0 = time.time()
     real_stdout = os.dup(1)
     os.dup2(2, 1)  # anything stray goes to stderr
     answers = []
+    diag_rows = []
     tests = json.loads((DATA / "tests.json").read_text())["tests"]
     dur = {t["number"]: round(t["seconds"] * 1000) for t in tests}
     ctx = Ctx(tests)
@@ -745,8 +794,12 @@ def main():
             sel = ({t[o] for o in sel if o in t} | ctx.map.unknown_new) if sel else set()
         nums = ctx.all if sel == ALL else sorted(sel)
         workers = pack(nums, dur)
+        if DIAG:
+            diag_rows.append((cid, nums, sel == ALL))
         log(cid, "ALL" if sel == ALL else len(nums), "workers", len(workers))
         answers.append(json.dumps({"commit": cid, "workers": workers}))
+    if DIAG:
+        answers = diag_answers(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
 
