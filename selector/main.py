@@ -495,6 +495,7 @@ def closure_modules(paths):
 
 
 SETMAP = os.environ.get("BR_SETMAP", "1") == "1"
+SET_GATE_FILE = Path(os.environ.get("BR_SET_GATE", str(HERE.parent / "maps" / "set_gate.json")))
 _SET_GATE = {}
 
 
@@ -506,6 +507,15 @@ def set_membership_only(attr):
     names, comments) makes it False."""
     if attr in _SET_GATE:
         return _SET_GATE[attr]
+    if not _SET_GATE.get("__loaded__"):
+        _SET_GATE["__loaded__"] = True
+        try:
+            pre = json.loads(SET_GATE_FILE.read_text())
+            _SET_GATE.update(pre)
+            if attr in _SET_GATE:
+                return _SET_GATE[attr]
+        except Exception:
+            pass
     ok = True
     try:
         hits = source_lines_with([(attr,)])

@@ -9,3 +9,4 @@ key_raw/
 maps/probe_base.json
 maps/tpcds_opt_trees.pkl
 maps/*.pkl
+maps/set_gate.json

@@ -53,6 +53,15 @@ for name in ("map.json.gz", "cmpprof.json.gz", "units.json.gz", "fp_base.json"):
         obj = json.load(_gz.open(p, "rt")) if name.endswith(".gz") else json.loads(p.read_text())
         with open(str(p) + ".pkl", "wb") as f:
             pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+# static gate for set-element selection, for every set attribute name
+_names = set()
+for _k in a.get("sentries", {}):
+    _names.add(_k.rsplit(".", 1)[-1].rsplit(":", 1)[-1])
+_m._SET_GATE.clear()
+_m._SET_GATE["__loaded__"] = True  # compute from source here, do not read an old file
+_gate = {n: _m.set_membership_only(n) for n in sorted(_names)}
+Path(out).with_name("set_gate.json").write_text(json.dumps(_gate))
+print("set gate:", sum(_gate.values()), "of", len(_gate), "names membership-only")
 # the per-query map, already indexed by (file, line)
 _m.UNITS_FILE = Path(out).with_name("units.json.gz")
 _m._UNITS[0] = None
