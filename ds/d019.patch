@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -97,7 +97,7 @@
+                     END) thu_sales,
+                 Sum(CASE
+                       WHEN ( d_day_name = 'Friday' ) THEN sales_price
+-                      ELSE NULL
++                      ELSE NULLx
+                     END) fri_sales,
+                 Sum(CASE
+                       WHEN ( d_day_name = 'Saturday' ) THEN sales_price

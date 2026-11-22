@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -4336,7 +4336,7 @@
+ --------------------------------------
+ SELECT
+        Sum(cs_ext_discount_amt) AS "excess discount amount"
+-FROM   catalog_sales ,
++FROM   catalog_sales 1 ,
+        item ,
+        date_dim
+ WHERE  i_manufact_id = 610

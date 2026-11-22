@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -6759,7 +6759,7 @@
+                                         'exportiunivamalg #9',
+                                                        'scholaramalgamalg #9' )
+                      )
+-                      OR ( i_category IN ( 'Women', 'Music', 'Men' )
++                      OR ( i_category IN ( 'Women', 'Music', 'Men 1' )
+                            AND i_class IN ( 'accessories', 'classical',
+                                             'fragrances',
+                                             'pants' )

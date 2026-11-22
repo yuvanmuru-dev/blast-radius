@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -3736,7 +3736,7 @@
+ WHERE  ss_sold_date_sk = d_date_sk
+        AND ss_item_sk = i_item_sk
+        AND ss_store_sk = s_store_sk
+-       AND ss_cdemo_sk = cd_demo_sk
++       AND ss_cdemo_sk = cd_demo_s
+        AND cd_gender = 'M'
+        AND cd_marital_status = 'D'
+        AND cd_education_status = 'College'

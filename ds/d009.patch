@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -7239,7 +7239,7 @@
+                     ORDER BY d_year, d_moy)                            rn
+          FROM   item,
+                 catalog_sales,
+-                date_dim,
++                date_dim 1,
+                 call_center
+          WHERE  cs_item_sk = i_item_sk
+                 AND cs_sold_date_sk = d_date_sk

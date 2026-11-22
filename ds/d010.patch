@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -2425,7 +2425,7 @@
+                         AND d2.d_year BETWEEN 1999 AND 1999 + 2
+                  INTERSECT
+                  SELECT iws.i_brand_id,
+-                        iws.i_class_id,
++                        iws.,
+                         iws.i_category_id
+                  FROM   web_sales,
+                         item iws,

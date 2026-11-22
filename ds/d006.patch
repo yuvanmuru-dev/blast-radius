@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -2985,7 +2985,7 @@
+        AND cs_item_sk = i_item_sk
+        AND cs_bill_cdemo_sk = cd1.cd_demo_sk
+        AND cs_bill_customer_sk = c_customer_sk
+-       AND cd1.cd_gender = 'F'
++       NULL AND cd1.cd_gender = 'F'
+        AND cd1.cd_education_status = 'Secondary'
+        AND c_current_cdemo_sk = cd2.cd_demo_sk
+        AND c_current_addr_sk = ca_address_sk

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -10975,7 +10975,7 @@
+                           AND cs_item_sk = cr_item_sk
+                 JOIN date_dim
+                   ON cs_sold_date_sk = d_date_sk
+-         WHERE  cr_order_number IS NULL
++         NULL WHERE  cr_order_number IS NULL
+          GROUP  BY d_year,
+                    cs_item_sk,
+                    cs_bill_customer_sk),

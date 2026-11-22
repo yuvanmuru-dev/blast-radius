@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -13059,7 +13059,7 @@
+ --------------------------------------
+ -- TPC-DS 98
+ --------------------------------------
+-SELECT i_item_id,
++SELECT i_item_id 1,
+        i_item_desc,
+        i_category,
+        i_class,

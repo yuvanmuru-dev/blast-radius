@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -2875,7 +2875,7 @@
+                store_returns_quantityave,
+                Stddev_samp(sr_return_quantity)                           AS
+                store_returns_quantitystdev,
+-               Stddev_samp(sr_return_quantity) / Avg(sr_return_quantity) AS
++               Stddev_samp(sr_return_quantit) / Avg(sr_return_quantity) AS
+                store_returns_quantitycov,
+                Count(cs_quantity)                                        AS
+                catalog_sales_quantitycount,

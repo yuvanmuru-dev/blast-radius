@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -628,7 +628,7 @@
+          GROUP BY s_store_id) , csr AS
+ (
+          SELECT   cp_catalog_page_id,
+-                  sum(sales_price) AS sales,
++                  sum(sales_price) AS sales 1,
+                   sum(profit)      AS profit,
+                   sum(return_amt)  AS returns1,
+                   sum(net_loss)    AS profit_loss

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -10611,7 +10611,7 @@
+                date_dim
+         WHERE  cs_warehouse_sk IS NULL
+                AND cs_sold_date_sk = d_date_sk
+-               AND cs_item_sk = i_item_sk) foo
++               AN cs_item_sk = i_item_sk) foo
+ GROUP  BY channel,
+           col_name,
+           d_year,

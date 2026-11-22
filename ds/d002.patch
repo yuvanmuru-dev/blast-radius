@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -9462,7 +9462,7 @@
+                   ,i_brand
+                   ,i_product_name
+                   ,d_year
+-                  ,d_qoy
++                  ,D_QOY
+                   ,d_moy
+                   ,s_store_id
+                   ,sum(coalesce(ss_sales_price*ss_quantity,0)) sumsales
