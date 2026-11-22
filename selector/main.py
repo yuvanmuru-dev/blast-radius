@@ -773,28 +773,82 @@ def _stmt_lines(tree, line):
     return set(range(best.lineno, max(best.lineno, hi) + 1)) | {line}
 
 
-def _tpcds_queries_reaching(text):
-    """TPC-DS query indices whose execution ran any changed optimizer line
-    (per-query map), or None when that cannot be told."""
-    if not UNITS_FILE.exists():
+def _tpcds_queries_reaching(text, prefix="sqlglot/optimizer/", ctx=None):
+    """TPC-DS query indices whose execution ran any changed line under prefix
+    (per-query map), or None when that cannot be told: also None when the test
+    runs a changed line that the per-query map does not attribute to a query
+    (code that runs outside the per-query work), so every query is checked."""
+    if not UNITS_FILE.exists() or ctx is None or ctx.map is None:
         return None
     try:
         um = _units().get("test_execute_tpcds")
         if not um:
             return None
+        tbit = next((1 << x["number"] for x in ctx.tests if x["id"] == TPCDS_ID), 0)
         q = set()
         for fp in difflib2.parse(text):
-            if not (fp.path.startswith("sqlglot/optimizer/") and fp.path.endswith(".py")):
+            if not (fp.path.startswith(prefix) and fp.path.endswith(".py")):
                 continue
             old = read_src(fp.path)
             tree = ast.parse(old)
             rm, an = difflib2.changed_old_lines(fp)
             for ln in set(rm) | {x for x in an if x > 0}:
                 for l2 in _stmt_lines(tree, ln):
-                    q |= um.get((fp.path, l2), set())
+                    hit = um.get((fp.path, l2))
+                    if hit:
+                        q |= hit
+                    elif ctx.map.lines("f", fp.path, l2, l2) & tbit or ctx.map.lines("m", fp.path, l2, l2) & tbit:
+                        return None  # run by the test, but not inside any one query's work
         return q
     except Exception:
         return None
+
+
+TPCDS_EXEC = os.environ.get("BR_TPCDS_EXEC", "1") == "1"
+
+
+def tpcds_exec_standin(ctx, cid, text, sel, dur):
+    """test_execute_tpcds for commits whose only behavioral change is in the
+    Python executor: re-execute the (reached) queries on the fixture data the
+    way the test's workers do and compare every result with the baseline."""
+    if not TPCDS_EXEC or not sel:
+        return sel
+    ids = {x["number"]: x["id"] for x in ctx.tests}
+    tn = next((n for n in sel if ids[n] == TPCDS_ID), None)
+    if tn is None:
+        return sel
+    changed = False
+    for path, s, _ in getattr(ctx, "diag_files", []):
+        if path.startswith("sqlglot/executor/") and path.endswith(".py"):
+            if path in getattr(ctx, "need_fp", []):
+                return sel
+            changed = True
+            continue
+        if s == ALL or (tn in s) or path in getattr(ctx, "need_fp", []):
+            return sel
+    if not changed:
+        return sel
+    before = cost_ms(pack(sorted(sel), dur), dur)
+    after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
+    if before - after < 15000 or not PROBE_BASE.exists():
+        return sel
+    extra = {"BR_TPCDS_CMP": str(PROBE_BASE)}
+    trees = PROBE_BASE.with_name("tpcds_opt_trees.pkl")
+    if trees.exists() and "sqlglot/executor/__init__.py" not in getattr(ctx, "patched_paths", set()) \
+            and os.environ.get("BR_TPCDS_FAST", "1") == "1":
+        extra["BR_TPCDS_FAST"] = str(trees)
+    q = None if os.environ.get("BR_TPCDS_ALLQ") == "1" else _tpcds_queries_reaching(text, "sqlglot/executor/", ctx)
+    if q is not None:
+        extra["BR_TPCDS_ONLY"] = ",".join(str(x) for x in sorted(q))
+    ov = verify.build_overlay(SRC, "/tmp/ov", patched_files(text))
+    try:
+        out = _probe_out("probe_tpcds_exec.py", ov, extra)
+    finally:
+        import shutil
+        shutil.rmtree(ov, ignore_errors=True)
+    same = out is not None and out.strip() == '{"same": true}'
+    log(cid, "tpcds-exec standin", "same" if same else "differs", (out or "").strip()[:60], "q", None if q is None else len(q))
+    return set(sel) - {tn} if same else sel
 
 
 def tpcds_opt_standin(ctx, cid, text, sel, dur):
@@ -828,7 +882,7 @@ def tpcds_opt_standin(ctx, cid, text, sel, dur):
     if not PROBE_BASE.exists():
         return sel
     extra = {"BR_TPCDS_CMP": str(PROBE_BASE)}
-    q = None if os.environ.get("BR_TPCDS_ALLQ") == "1" else _tpcds_queries_reaching(text)
+    q = None if os.environ.get("BR_TPCDS_ALLQ") == "1" else _tpcds_queries_reaching(text, ctx=ctx)
     if q is not None:
         extra["BR_TPCDS_ONLY"] = ",".join(str(x) for x in sorted(q))
     ov = verify.build_overlay(SRC, "/tmp/ov", patched_files(text))
@@ -846,12 +900,12 @@ _PB = {}
 
 def _probe_out(script, root, extra=None):
     import subprocess
-    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "BR_TPCDS_CMP")}
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "BR_TPCDS_CMP", "BR_TPCDS_FAST", "BR_TPCDS_ONLY", "BR_TPCDS_DUMP_OPT")}
     env.update(PYTHONHASHSEED="0", PYTHONDONTWRITEBYTECODE="1")
     env.update(extra or {})
     try:
         r = subprocess.run([sys.executable, "-S", str(HERE / script)], cwd=str(root), env=env,
-                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60)
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=90)
     except Exception:
         return None
     out = r.stdout.decode("utf-8", "replace")
@@ -1223,6 +1277,11 @@ def main():
                     sel = tpcds_opt_standin(ctx, cid, text, sel, dur)
                 except Exception as e:
                     log(cid, "tpcds-opt error", repr(e))
+            if sel != ALL:
+                try:
+                    sel = tpcds_exec_standin(ctx, cid, text, sel, dur)
+                except Exception as e:
+                    log(cid, "tpcds-exec error", repr(e))
             if sel != ALL:
                 try:
                     sel = maybe_verify(ctx, cid, text, sel, dur, deadline)
