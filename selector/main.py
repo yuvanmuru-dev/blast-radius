@@ -770,6 +770,8 @@ def _stmt_lines(tree, line):
     body = getattr(best, "body", None)
     if isinstance(body, list) and body and isinstance(body[0], ast.stmt):
         hi = body[0].lineno - 1
+        if line > hi:
+            return {line}  # inside the body but in no statement (blank, comment): just itself
     return set(range(best.lineno, max(best.lineno, hi) + 1)) | {line}
 
 
@@ -791,8 +793,21 @@ def _tpcds_queries_reaching(text, prefix="sqlglot/optimizer/", ctx=None):
                 continue
             old = read_src(fp.path)
             tree = ast.parse(old)
-            rm, an = difflib2.changed_old_lines(fp)
-            for ln in set(rm) | {x for x in an if x > 0}:
+            try:
+                if rules.same_tree(tree, ast.parse(difflib2.apply(old, fp))):
+                    continue  # comments / formatting only
+            except SyntaxError:
+                return None
+            lines = set()
+            for hk in fp.hunks:
+                one = difflib2.FilePatch()
+                one.hunks = [hk]
+                body = hk[4]
+                if all(tag == " " or rules._is_trivia(txt) for tag, txt in body):
+                    continue  # this hunk only adds or removes comments / blank lines
+                rm, an = difflib2.changed_old_lines(one)
+                lines |= set(rm) | {x for x in an if x > 0}
+            for ln in lines:
                 for l2 in _stmt_lines(tree, ln):
                     hit = um.get((fp.path, l2))
                     if hit:
