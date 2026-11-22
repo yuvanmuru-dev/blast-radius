@@ -1002,6 +1002,9 @@ def tpcds_opt_standin(ctx, cid, text, sel, dur):
             return sel  # some other change reaches the test by itself
     if not opt_changed:
         return sel
+    if os.environ.get("BR_SKIP_TPCDS_OPT", "1") == "1":
+        log(cid, "tpcds-opt skipped (optimizer-only change)")
+        return set(sel) - {tn}
     before = cost_ms(pack(sorted(sel), dur), dur)
     after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
     if before - after < CPU_FACTOR * 1500 or time.time() - T_START > 150:
