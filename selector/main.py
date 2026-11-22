@@ -363,10 +363,13 @@ def fingerprint_select(ctx, text, cid):
     keyed_log = []
     bextra = base.get("extra", {})
     nextra = new.get("extra", {})
+    failed_now = set(new.get("failed", []))
     for k in set(bfp) | set(nfp):
         a, b = bfp.get(k), nfp.get(k)
         if a == b:
             continue
+        if k.split(":", 1)[0] in failed_now:
+            continue  # module no longer imports: its importers are selected via file_any below
         bx, nx = bextra.get(k), nextra.get(k)
         if FUNC_BODY and bx and nx:
             bf, nf = bx.get("fn"), nx.get("fn")
@@ -414,6 +417,8 @@ def fingerprint_select(ctx, text, cid):
     log(cid, "fp changed", {o: sorted(e["attrs"])[:4] for o, e in list(by_owner.items())[:4]}, sorted(glob_tokens)[:4],
         "keyed", keyed_log[:4])
     bits |= keyed_bits
+    if os.environ.get("BR_DBG_TEST") and (keyed_bits >> int(os.environ["BR_DBG_TEST"])) & 1:
+        log(cid, "DBGX via keyed", keyed_log)
     if len(by_owner) > 400:
         return ALL
     if not by_owner and not glob_tokens and not failed and not keyed_log:
@@ -424,13 +429,22 @@ def fingerprint_select(ctx, text, cid):
             if not rules.inert_change(o, n):
                 bits |= M.file_any(p)
         return bits
+    if glob_tokens and os.environ.get("BR_DBG_TEST"):
+        _g = 0
+        for f, lines in source_lines_with(glob_tokens).items():
+            for l in lines:
+                _g |= M.lines("f", f, l, l)
+        if (_g >> int(os.environ["BR_DBG_TEST"])) & 1:
+            log(cid, "DBGX via globals", sorted(glob_tokens)[:5])
     if glob_tokens:
         for f, lines in source_lines_with(glob_tokens).items():
             for l in lines:
                 bits |= M.lines("f", f, l, l)
     if any(p.startswith("sqlglot/typing/") for p in ctx.need_fp):
         bits |= M.file_tests("tests/test_typing.py")
+    DBG = os.environ.get("BR_DBG_TEST")
     for owner, ent in by_owner.items():
+        _b0 = bits
         qparts = tuple(p for p in ent["qual"].split(".") if p and not p.startswith("<"))
         recv = M.receivers(owner)
         if ent["all_values"] and NARROW_ATTRS:
@@ -450,6 +464,8 @@ def fingerprint_select(ctx, text, cid):
             for f, lines in source_lines_with({qparts}).items():
                 for l in lines:
                     bits |= M.lines("f", f, l, l)
+        if DBG and not (_b0 >> int(DBG)) & 1 and (bits >> int(DBG)) & 1:
+            log(cid, "DBGX owner pulls test", owner, sorted(ent["attrs"])[:5], ent["all_values"])
     return bits
 
 
