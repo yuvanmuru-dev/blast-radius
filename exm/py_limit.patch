@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -505,7 +505,7 @@
+         sort_ctx.sort(self.generate_tuple(step.key))
+ 
+         if not math.isinf(step.limit):
+-            sort_ctx.table.rows = sort_ctx.table.rows[0 : step.offset + step.limit]
++            sort_ctx.table.rows = sort_ctx.table.rows[0 : step.offset + step.limit + 1]
+ 
+         rows = sort_ctx.table.rows
+ 
