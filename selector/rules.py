@@ -675,7 +675,7 @@ def inert_insertion(onode, nnode):
     return ast.dump(onode) == ast.dump(nn)
 
 
-VPROF = os.environ.get("BR_VPROF", "0") == "1"
+VPROF = os.environ.get("BR_VPROF", "1") == "1"
 SWAP_FLAGS_EQ = {"isne", "eqnonbool", "eqerr"}
 SWAP_FLAGS_ORD = {"equal", "eqerr"}
 SWAP_FLAGS_BOOL = {"boolne", "boolerr"}
