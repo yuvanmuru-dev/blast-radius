@@ -56,23 +56,32 @@ def main():
         except BaseException:  # noqa: BLE001
             print(json.dumps({"same": False, "at": "nobase"}))
             return
+    only = os.environ.get("BR_TPCDS_ONLY")
+    only = None if only is None else {int(x) for x in only.split(",") if x}
     for i, (meta, sql, _) in enumerate(load_sql_fixture_pairs("optimizer/tpc-ds/tpc-ds.sql")):
-        rec = []
-        try:
-            e = parse_one(sql)
-            rec.append(repr(dump(e, set())))
-            if meta.get("execute"):
-                rec.append(repr(transpile(sql, write="duckdb")))
-                o = optimize(e.copy(), TPCDS_SCHEMA, leave_tables_isolated=True)
-                rec.append(repr(dump(o, set())))
-        except BaseException as ex:  # noqa: BLE001
-            rec.append("ERR " + repr(ex))
-        out[i] = hashlib.sha1("\n".join(rec).encode()).hexdigest()
-        if base is not None and base.get(str(i)) != out[i]:
-            print(json.dumps({"same": False, "at": i}))  # stop at the first difference
-            return
+        # "p": parse (+ DuckDB SQL for executed queries); "o": optimized tree
+        for part in ("p", "o"):
+            if part == "o" and (not meta.get("execute") or (only is not None and i not in only)):
+                continue
+            rec = []
+            try:
+                e = parse_one(sql)
+                if part == "p":
+                    rec.append(repr(dump(e, set())))
+                    if meta.get("execute"):
+                        rec.append(repr(transpile(sql, write="duckdb")))
+                else:
+                    o = optimize(e.copy(), TPCDS_SCHEMA, leave_tables_isolated=True)
+                    rec.append(repr(dump(o, set())))
+            except BaseException as ex:  # noqa: BLE001
+                rec.append("ERR " + repr(ex))
+            h = hashlib.sha1("\n".join(rec).encode()).hexdigest()
+            out[f"{part}{i}"] = h
+            if base is not None and base.get(f"{part}{i}") != h:
+                print(json.dumps({"same": False, "at": f"{part}{i}"}))  # stop at the first difference
+                return
     if base is not None:
-        print(json.dumps({"same": len(base) == len(out)}))
+        print(json.dumps({"same": True}))
         return
     print(json.dumps(out, sort_keys=True))
 

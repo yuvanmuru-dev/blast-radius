@@ -756,6 +756,47 @@ TPCDS_OPT = os.environ.get("BR_TPCDS_OPT", "1") == "1"
 OPT_RUNTIME = {"sqlglot/optimizer/scope.py", "sqlglot/optimizer/eliminate_joins.py"}
 
 
+def _stmt_lines(tree, line):
+    """Lines of the innermost statement containing `line` (header lines only for
+    compound statements), so continuation lines map to their statement."""
+    best = None
+    for n in ast.walk(tree):
+        if isinstance(n, ast.stmt) and n.lineno <= line <= (n.end_lineno or n.lineno):
+            if best is None or (n.lineno >= best.lineno and (n.end_lineno or n.lineno) <= (best.end_lineno or best.lineno)):
+                best = n
+    if best is None:
+        return {line}
+    hi = best.end_lineno or best.lineno
+    body = getattr(best, "body", None)
+    if isinstance(body, list) and body and isinstance(body[0], ast.stmt):
+        hi = body[0].lineno - 1
+    return set(range(best.lineno, max(best.lineno, hi) + 1)) | {line}
+
+
+def _tpcds_queries_reaching(text):
+    """TPC-DS query indices whose execution ran any changed optimizer line
+    (per-query map), or None when that cannot be told."""
+    if not UNITS_FILE.exists():
+        return None
+    try:
+        um = _units().get("test_execute_tpcds")
+        if not um:
+            return None
+        q = set()
+        for fp in difflib2.parse(text):
+            if not (fp.path.startswith("sqlglot/optimizer/") and fp.path.endswith(".py")):
+                continue
+            old = read_src(fp.path)
+            tree = ast.parse(old)
+            rm, an = difflib2.changed_old_lines(fp)
+            for ln in set(rm) | {x for x in an if x > 0}:
+                for l2 in _stmt_lines(tree, ln):
+                    q |= um.get((fp.path, l2), set())
+        return q
+    except Exception:
+        return None
+
+
 def tpcds_opt_standin(ctx, cid, text, sel, dur):
     """test_execute_tpcds for commits whose only behavioral change is in
     optimizer code: identical optimized trees (and DuckDB SQL) for every
@@ -781,14 +822,18 @@ def tpcds_opt_standin(ctx, cid, text, sel, dur):
         return sel
     before = cost_ms(pack(sorted(sel), dur), dur)
     after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
-    if before - after < CPU_FACTOR * 3800:
+    if before - after < CPU_FACTOR * 1500:
         return sel
     script = "probe_tpcds_opt.py"
     if not PROBE_BASE.exists():
         return sel
+    extra = {"BR_TPCDS_CMP": str(PROBE_BASE)}
+    q = None if os.environ.get("BR_TPCDS_ALLQ") == "1" else _tpcds_queries_reaching(text)
+    if q is not None:
+        extra["BR_TPCDS_ONLY"] = ",".join(str(x) for x in sorted(q))
     ov = verify.build_overlay(SRC, "/tmp/ov", patched_files(text))
     try:
-        out = _probe_out(script, ov, {"BR_TPCDS_CMP": str(PROBE_BASE)})
+        out = _probe_out(script, ov, extra)
     finally:
         import shutil
         shutil.rmtree(ov, ignore_errors=True)
