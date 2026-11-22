@@ -213,6 +213,45 @@ def _tpc_pairs(text):
     return out
 
 
+def _tpcds_sql_edit_inert(ctx, o, n):
+    """test_execute_tpcds parses every query (parse_one in the test process) but
+    only runs the ones whose meta has an "execute" key. An edited query is
+    harmless when it still parses and is either not run, or parses to the same
+    tree and transpiles to the same DuckDB SQL. Only for fixture-only commits:
+    the check uses the pristine sqlglot."""
+    if len(o) != len(n) or any(p.startswith("sqlglot/") for p in ctx.patched_paths):
+        return False
+    try:
+        if str(SRC) not in sys.path:
+            sys.path.insert(1, str(SRC))
+        import sqlglot
+        if not str(Path(sqlglot.__file__).resolve()).startswith(str(SRC)):
+            return False
+        from sqlglot import parse_one, transpile
+    except Exception:
+        return False
+    for (mo, qo, _), (mn, qn, _) in zip(o, n):
+        if (mo, qo) == (mn, qn):
+            continue
+        if mo != mn:
+            return False
+        try:
+            tn = parse_one(qn)
+            import pickle
+            pickle.dumps(tn)  # the test ships it to a worker process
+        except Exception:
+            return False
+        if not mn.get("execute"):
+            continue
+        try:
+            to = parse_one(qo)
+            if to != tn or to.sql() != tn.sql() or transpile(qo, write="duckdb") != transpile(qn, write="duckdb"):
+                return False
+        except Exception:
+            return False
+    return True
+
+
 def tpc_fixture_refine(ctx, path, old, new, bits):
     """A TPC fixture edit only reaches TestExecutor tests through setUpClass:
     keep the ones that read a changed part, drop the rest when both files
@@ -232,8 +271,11 @@ def tpc_fixture_refine(ctx, path, old, new, bits):
                 _tpc_pairs(other_text)
     except Exception:
         return bits  # setUpClass would fail: every TestExecutor test is affected
+    meta_sql_changed = [(m, q) for m, q, _ in o] != [(m, q) for m, q, _ in n]
+    if meta_sql_changed and path.endswith("tpc-ds.sql") and _tpcds_sql_edit_inert(ctx, o, n):
+        meta_sql_changed = False
     changed = {
-        "meta_sql": [(m, q) for m, q, _ in o] != [(m, q) for m, q, _ in n],
+        "meta_sql": meta_sql_changed,
         "sql_expected": [(q, e) for _, q, e in o] != [(q, e) for _, q, e in n],
     }
     which = TPC_FIXTURES[path]
