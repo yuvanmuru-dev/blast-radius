@@ -388,6 +388,8 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
                 spans = _insertion_spans(onode, old_l, new_l, new_text, old_text)
             elif n_regions == 1 and code_rem and not code_add:
                 spans = _deletion_spans(onode, code_rem, old_text)
+        if nnode is not None and INERT_INS and inert_insertion(onode, nnode):
+            continue  # only dead statements were added: nothing can observe them
         plan.append((onode, nnode, spans))
     # provably equivalent operator swaps (per-site value profile of the whole suite)
     if M.cmp and plan:
@@ -546,6 +548,96 @@ def _diff_points(a, b, out):
                 out.append((a, b)); return
     elif a != b:
         out.append((a, b))
+
+
+INERT_INS = os.environ.get("BR_INERT_INS", "1") == "1"
+_DYNAMIC = {"locals", "vars", "eval", "exec", "globals", "dir", "_getframe", "currentframe", "getframeinfo"}
+
+
+def _literal(n):
+    if isinstance(n, ast.Constant):
+        return True
+    if isinstance(n, (ast.List, ast.Tuple, ast.Set)):
+        return all(_literal(e) for e in n.elts)
+    if isinstance(n, ast.Dict):
+        return all(k is not None and _literal(k) for k in n.keys) and all(_literal(v) for v in n.values)
+    if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
+        return isinstance(n.operand, ast.Constant)
+    return False
+
+
+def _inert_stmt(st):
+    """A statement with no observable effect apart from binding a fresh local."""
+    if isinstance(st, ast.Pass):
+        return None, True
+    if isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant):
+        return None, True
+    if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name) \
+            and _literal(st.value):
+        return st.targets[0].id, True
+    if isinstance(st, ast.AnnAssign) and isinstance(st.target, ast.Name) and st.simple \
+            and st.value is not None and _literal(st.value):
+        return st.target.id, True
+    return None, False
+
+
+def inert_insertion(onode, nnode):
+    """New function = old function plus dead statements only."""
+    if not isinstance(onode, (ast.FunctionDef, ast.AsyncFunctionDef)) or type(onode) is not type(nnode):
+        return False
+    names_old = set()
+    for n in ast.walk(onode):
+        if isinstance(n, ast.Name):
+            names_old.add(n.id)
+        elif isinstance(n, ast.arg):
+            names_old.add(n.arg)
+        elif isinstance(n, (ast.Global, ast.Nonlocal)):
+            return False
+        elif isinstance(n, ast.Call):
+            f = n.func
+            if (isinstance(f, ast.Name) and f.id in _DYNAMIC) or (isinstance(f, ast.Attribute) and f.attr in _DYNAMIC):
+                return False
+    added = []
+
+    def strip(node):
+        """Return a copy-free comparison by removing inert statements from bodies."""
+        for field in ("body", "orelse", "finalbody"):
+            lst = getattr(node, field, None)
+            if isinstance(lst, list) and lst and isinstance(lst[0], ast.stmt):
+                keep = []
+                for idx, st in enumerate(lst):
+                    nm, ok = _inert_stmt(st)
+                    if ok and idx == 0 and field == "body" and isinstance(st, ast.Expr) and isinstance(
+                            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        ok = False  # would become (or replace) a docstring, which doctests read
+                    if ok and (nm is None or nm not in names_old) and not _in_old(st):
+                        added.append((nm, st))
+                    else:
+                        keep.append(st)
+                        strip(st)
+                setattr(node, field, keep)
+        for h in getattr(node, "handlers", []) or []:
+            strip(h)
+
+    old_dumps = {ast.dump(st) for st in ast.walk(onode) if isinstance(st, ast.stmt)}
+
+    def _in_old(st):
+        return ast.dump(st) in old_dumps
+
+    import copy
+    nn = copy.deepcopy(nnode)
+    strip(nn)
+    if not added:
+        return False
+    # a fresh name must not be read anywhere in the new function either
+    fresh = {nm for nm, _ in added if nm is not None}
+    for n in ast.walk(nn):
+        if isinstance(n, ast.Name) and n.id in fresh:
+            return False
+        if isinstance(n, (ast.Global, ast.Nonlocal)):
+            return False
+    # a function whose body would become empty is not the same function
+    return ast.dump(onode) == ast.dump(nn)
 
 
 VPROF = os.environ.get("BR_VPROF", "0") == "1"
