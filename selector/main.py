@@ -311,8 +311,16 @@ def select_commit(ctx, text, cid="x"):
                     ctx.patched_new[fp.path] = difflib2.apply(o, fp)
                 except Exception:
                     pass
+    ctx.diag_files = []
     for fp in files:
         s = select_file(ctx, fp)
+        if DIAG:
+            try:
+                rm, an = difflib2.changed_old_lines(fp)
+                cl = sorted(rm) or sorted(x for x in an if x > 0)
+            except Exception:
+                cl = []
+            ctx.diag_files.append((fp.path, s, cl[0] if cl else 0))
         if s == ALL:
             return ALL
         out |= s
@@ -834,7 +842,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2")
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3")
 DIAG_MODE = os.environ.get("BR_DIAG", "0")
 DIAG_GROUPS = [
     ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
@@ -874,6 +882,37 @@ def diag2_answers(rows, tests, dur):
     codes = (codes + [63, 63, 63])[:3]
     target = 500000 + codes[0] + 64 * codes[1] + 4096 * codes[2]
     log("DIAG2 codes", codes, "base", base, "target", target)
+    return _diag_pad(out, base, target, tid, dur)
+
+
+def _py_index():
+    files = sorted(str(p.relative_to(SRC)) for p in (SRC / "sqlglot").rglob("*.py") if "__pycache__" not in p.parts)
+    return {f: i for i, f in enumerate(files)}
+
+
+def diag3_answers(rows, tests, dur):
+    """Practice diagnostic 3: the first commit selecting DIAG_TEST. Which file
+    brought the test in and the first changed line of that file:
+        total = 500000 + 4096*file_index + first_old_line   (file_index into the
+    sorted sqlglot/**/*.py list; 255 = not a sqlglot .py file; line capped 4095).
+    If the test only came from the class/module fingerprint, the first
+    fingerprinted file is reported with line 0. Selections are unchanged."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    idx = _py_index()
+    out, base, code = [], 0, None
+    for cid, nums, is_all, paths, used_fp, dfiles, fpfiles in rows:
+        if code is None and tid in nums:
+            hit = next(((p, ln) for p, s, ln in dfiles if s != ALL and tid in s), None)
+            if hit is None and fpfiles:
+                hit = (fpfiles[0], 0)
+            if hit is None:
+                hit = (paths[0] if paths else "", 4095)
+            code = 4096 * idx.get(hit[0], 255) + min(hit[1], 4095)
+            log("DIAG3", cid, hit, code)
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    target = 500000 + (code if code is not None else 255 * 4096 + 4095)
     return _diag_pad(out, base, target, tid, dur)
 
 
@@ -985,11 +1024,12 @@ def main():
         workers = pack(nums, dur)
         if DIAG:
             diag_rows.append((cid, nums, sel == ALL, sorted(getattr(ctx, "patched_paths", set())),
-                              bool(getattr(ctx, "need_fp", None))))
+                              bool(getattr(ctx, "need_fp", None)), list(getattr(ctx, "diag_files", [])),
+                              list(getattr(ctx, "need_fp", []) or [])))
         log(cid, "ALL" if sel == ALL else len(nums), "workers", len(workers))
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
-        answers = (diag2_answers if DIAG_MODE == "2" else diag_answers)(diag_rows, tests, dur)
+        answers = {"2": diag2_answers, "3": diag3_answers}.get(DIAG_MODE, diag_answers)(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
 
