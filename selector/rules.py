@@ -30,6 +30,9 @@ class Map:
         self.ka = d.get("ka", {})
         self.kw = d.get("kw", {})
         self.keys_ok = bool(d.get("keys_ok"))
+        self.idnum = {t["id"]: t["number"] for t in tests} if tests else {}
+        self._vprof_path = os.path.join(os.path.dirname(path), "vprof.json.gz")
+        self._vprof = False
         self.cmp = {}
         cp = os.path.join(os.path.dirname(path), "cmpprof.json.gz")
         if os.path.exists(cp):
@@ -64,6 +67,19 @@ class Map:
                 if lo <= l <= hi:
                     bits |= self.sets[i]
         return bits
+
+    def vprof(self):
+        if self._vprof is False:
+            self._vprof = None
+            try:
+                if os.path.exists(self._vprof_path):
+                    with gzip.open(self._vprof_path, "rt") as g:
+                        d = json.load(g)
+                    flags = {s: {f: set(k) for f, k in v.items()} for s, v in d["flags"].items()}
+                    self._vprof = (flags, set(d["inst"]), set(d["ok"]))
+            except Exception:
+                self._vprof = None
+        return self._vprof
 
     def file_any(self, f):
         self.nonspan = True
@@ -395,15 +411,19 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
         need_fp = True  # something outside the matched bodies changed too
     bits = 0
     for onode, nnode, spans in plan:
+        eb = 0
         if spans is None:
             if isinstance(onode, ast.Lambda):
                 lo, hi = onode.lineno, onode.end_lineno
             else:
                 lo, hi = onode.body[0].lineno, onode.end_lineno
-            bits |= M.lines("f", path, lo, hi)
+            eb |= M.lines("f", path, lo, hi)
         else:
             for lo, hi in spans:
-                bits |= M.lines("f", path, lo, hi)
+                eb |= M.lines("f", path, lo, hi)
+        if eb and nnode is not None:
+            eb &= ~swap_safe_tests(M, path, onode, nnode)
+        bits |= eb
     if path.startswith("sqlglot/typing/"):
         bits |= M.file_tests("tests/test_typing.py")
     bits |= fallback_bits
@@ -508,6 +528,10 @@ def _diff_points(a, b, out):
                 ast.dump(x) == ast.dump(y) for x, y in zip(a.comparators, b.comparators)):
             out.append((a, b)); return
         out.append((None, None)); return
+    if isinstance(a, ast.BoolOp) and type(a.op) is not type(b.op):
+        if len(a.values) == len(b.values) and all(ast.dump(x) == ast.dump(y) for x, y in zip(a.values, b.values)):
+            out.append((a, b)); return
+        out.append((None, None)); return
     if isinstance(a, ast.AST):
         for f in a._fields:
             va, vb = getattr(a, f, None), getattr(b, f, None)
@@ -522,6 +546,58 @@ def _diff_points(a, b, out):
                 out.append((a, b)); return
     elif a != b:
         out.append((a, b))
+
+
+VPROF = os.environ.get("BR_VPROF", "0") == "1"
+SWAP_FLAGS_EQ = {"isne", "eqnonbool", "eqerr"}
+SWAP_FLAGS_ORD = {"equal", "eqerr"}
+SWAP_FLAGS_BOOL = {"boolne", "boolerr"}
+
+
+def swap_safe_tests(M, path, onode, nnode):
+    """Tests whose own run never told the two operators apart at any site of
+    this edit (per-test value profile). 0 unless the edit is only swaps."""
+    if not VPROF:
+        return 0
+    pts = []
+    _diff_points(onode, nnode, pts)
+    if not pts:
+        return 0
+    sites = []
+    for a, b in pts:
+        if isinstance(a, ast.Compare) and isinstance(b, ast.Compare) and len(a.ops) == 1:
+            pair = {type(a.ops[0]), type(b.ops[0])}
+            if any(pair <= g for g in EQ_GROUPS):
+                sites.append((f"{path}:{a.lineno}:{a.col_offset}", SWAP_FLAGS_EQ, False))
+            elif any(pair <= g for g in ORD_GROUPS):
+                sites.append((f"{path}:{a.lineno}:{a.col_offset}", SWAP_FLAGS_ORD, False))
+            else:
+                return 0
+        elif isinstance(a, ast.BoolOp) and isinstance(b, ast.BoolOp):
+            sites.append((f"{path}:{a.lineno}:{a.col_offset}", SWAP_FLAGS_BOOL, True))
+        else:
+            return 0
+    vp = M.vprof()
+    if vp is None:
+        return 0
+    flags, inst, ok = vp
+    bad_keys = set()
+    for site, rel, needs_inst in sites:
+        if needs_inst and site not in inst:
+            return 0
+        for fl in rel:
+            bad_keys |= flags.get(site, {}).get(fl, set())
+    if "*" in bad_keys:
+        return 0
+    safe = 0
+    for tid, num in M.idnum.items():
+        if tid not in ok:
+            continue
+        parts = tid.split("::")
+        if tid in bad_keys or parts[0] in bad_keys or "::".join(parts[:2]) in bad_keys:
+            continue
+        safe |= 1 << num
+    return safe
 
 
 def _cmp_pair_ok(M, path, a, b):
