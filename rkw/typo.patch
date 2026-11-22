@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/mysql.py b/sqlglot/generators/mysql.py
+index 0000000..1111111 100644
+--- a/sqlglot/generators/mysql.py
++++ b/sqlglot/generators/mysql.py
+@@ -404,7 +404,7 @@
+         "describe",
+         "deterministic",
+         "distinct",
+-        "distinctrow",
++        "distinctro",
+         "div",
+         "double",
+         "drop",
