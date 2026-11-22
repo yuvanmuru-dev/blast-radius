@@ -56,15 +56,18 @@ def kd(k):
 
 
 class TDict(dict):
-    __slots__ = ("_br_owner", "_br_attr")
+    __slots__ = ("_br_names",)
 
     def _hit(self, k):
         if not IMPORTING[0]:
-            ACC.add((self._br_owner, self._br_attr, kd(k)))
+            d = kd(k)
+            for o, a in self._br_names:
+                ACC.add((o, a, d))
 
     def _wild(self):
         if not IMPORTING[0]:
-            WILD.add((self._br_owner, self._br_attr))
+            for o, a in self._br_names:
+                WILD.add((o, a))
 
     def __getitem__(self, k):
         self._hit(k)
@@ -146,9 +149,37 @@ class TDict(dict):
 
 
 DONE = set()
+WRAPPED = {}  # id(original dict) -> TDict
+
+
+def _wrap(v, owner, attr):
+    """Return the TDict standing in for dict v (shared by all its names)."""
+    if isinstance(v, TDict):
+        if (owner, attr) not in v._br_names:
+            v._br_names.append((owner, attr))
+        return v
+    t = WRAPPED.get(id(v))
+    if t is None:
+        t = TDict(v)
+        t._br_names = []
+        WRAPPED[id(v)] = t
+        KEEP.append(v)
+    if (owner, attr) not in t._br_names:
+        t._br_names.append((owner, attr))
+    return t
+
+
+KEEP = []
 
 
 def instrument_module(m):
+    # module-level dict globals, then classes (aliases share one TDict)
+    for name, v in list(vars(m).items()):
+        if (type(v) is dict or isinstance(v, TDict)) and not name.startswith("__"):
+            try:
+                setattr(m, name, _wrap(v, "module:" + m.__name__, name))
+            except Exception:  # noqa: BLE001
+                pass
     for name, v in list(vars(m).items()):
         if isinstance(v, type) and getattr(v, "__module__", None) == m.__name__:
             instrument_class(v)
@@ -160,16 +191,44 @@ def instrument_class(cls):
     DONE.add(id(cls))
     owner = f"{cls.__module__}.{cls.__qualname__}"
     for attr, v in list(cls.__dict__.items()):
-        if type(v) is dict and not attr.startswith("__"):
-            t = TDict(v)
-            t._br_owner = owner
-            t._br_attr = attr
+        if (type(v) is dict or isinstance(v, TDict)) and not attr.startswith("__"):
             try:
-                setattr(cls, attr, t)
+                setattr(cls, attr, _wrap(v, owner, attr))
             except (AttributeError, TypeError):
                 pass
         elif isinstance(v, type) and str(getattr(v, "__module__", "")).startswith("sqlglot"):
             instrument_class(v)
+
+
+def instrument_all():
+    mods = [m for n, m in list(sys.modules.items()) if m is not None and (n == "sqlglot" or n.startswith("sqlglot."))]
+    # two passes so every alias of a dict joins the same TDict before classes are walked
+    for m in mods:
+        for name, v in list(vars(m).items()):
+            if type(v) is dict and not name.startswith("__"):
+                _wrap(v, "module:" + m.__name__, name)
+    for m in mods:
+        for name, v in list(vars(m).items()):
+            if isinstance(v, type) and getattr(v, "__module__", "").startswith("sqlglot"):
+                for attr, x in list(v.__dict__.items()):
+                    if type(x) is dict and not attr.startswith("__"):
+                        _wrap(x, f"{v.__module__}.{v.__qualname__}", attr)
+    for m in mods:
+        instrument_module(m)
+    # aliases held by test modules / test classes (from x import D)
+    for n, m in list(sys.modules.items()):
+        if m is None or not (n == "tests" or n.startswith("tests.")):
+            continue
+        for name, v in list(vars(m).items()):
+            if type(v) is dict and id(v) in WRAPPED:
+                setattr(m, name, WRAPPED[id(v)])
+            elif isinstance(v, type) and getattr(v, "__module__", "") == n:
+                for attr, x in list(v.__dict__.items()):
+                    if type(x) is dict and id(x) in WRAPPED:
+                        try:
+                            setattr(v, attr, WRAPPED[id(x)])
+                        except (AttributeError, TypeError):
+                            pass
 
 
 def hook_dispatch():
@@ -190,19 +249,11 @@ def hook_dispatch():
             IMPORTING[0] -= 1
         src = cls.TRANSFORMS
         t = TDict(d)
-        t._br_owner = getattr(src, "_br_owner", f"{cls.__module__}.{cls.__qualname__}")
-        t._br_attr = "TRANSFORMS"
+        t._br_names = list(getattr(src, "_br_names", [(f"{cls.__module__}.{cls.__qualname__}", "TRANSFORMS")]))
         return t
 
     _build_dispatch._br = True
     g._build_dispatch = _build_dispatch
-
-
-def instrument_all():
-    for name, m in list(sys.modules.items()):
-        if name == "sqlglot" or name.startswith("sqlglot."):
-            if m is not None:
-                instrument_module(m)
 
 
 def install_hooks():

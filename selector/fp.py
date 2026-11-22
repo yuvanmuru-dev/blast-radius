@@ -212,6 +212,8 @@ def fingerprint(root, modules, key_order=None):
                 continue
             else:
                 out[key] = ("", digest(h(val)), "V")
+                if type(val) is dict:
+                    DICTS[key] = val
     return out, failed
 
 

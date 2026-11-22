@@ -385,7 +385,16 @@ def fingerprint_select(ctx, text, cid):
             if kind != "V" or attr.startswith("__"):
                 ent["all_values"] = False
         else:
-            glob_tokens.add((k.split(":", 1)[1],))
+            mod, gname = k.split(":", 1)
+            be, ne = base_entries.get(k), new.get("entries", {}).get(k)
+            if KEYED and be is not None and ne is not None and M.keys_ok:
+                changed = {x for x in set(be) | set(ne) if be.get(x) != ne.get(x)}
+                kb = M.key_reads("module:" + mod, gname, changed)
+                if kb is not None:
+                    keyed_bits |= kb
+                    keyed_log.append((mod.rsplit(".", 1)[-1], gname, len(changed)))
+                    continue
+            glob_tokens.add((gname,))
     log(cid, "fp changed", {o: sorted(e["attrs"])[:4] for o, e in list(by_owner.items())[:4]}, sorted(glob_tokens)[:4],
         "keyed", keyed_log[:4])
     bits |= keyed_bits
