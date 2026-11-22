@@ -792,7 +792,69 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") == "1"
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2")
+DIAG_MODE = os.environ.get("BR_DIAG", "0")
+DIAG_GROUPS = [
+    ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
+    ("sqlglot/dialects/",), ("sqlglot/generators/",), ("sqlglot/parsers/",),
+    ("sqlglot/tokens.py", "sqlglot/tokenizer_core.py"), ("sqlglot/executor/", "sqlglot/planner.py"),
+    ("sqlglot/typing/",), ("sqlglot/errors.py", "sqlglot/helper.py", "sqlglot/serde.py", "sqlglot/__init__.py"),
+    ("tests/fixtures/",), ("tests/",), ("sqlglot/schema.py", "sqlglot/time.py", "sqlglot/trie.py", "sqlglot/jsonpath.py"),
+]
+
+
+def _diag_group(paths):
+    """First matching group over all patched paths (order of DIAG_GROUPS); 14 other, 15 none."""
+    best = 15
+    for p in paths:
+        g = next((i for i, pre in enumerate(DIAG_GROUPS) if any(p.startswith(x) for x in pre)), 14)
+        best = min(best, g)
+    return best
+
+
+def diag2_answers(rows, tests, dur):
+    """Practice diagnostic 2: for the (first 3) commits that select DIAG_TEST,
+    code = group*4 + path (0 line, 1 fp, 2 fixture/non-py, 3 multi-file);
+    total = 500000 + c0 + 64*c1 + 4096*c2 ms. DIAG_TEST is removed from the
+    first such commit only, so the miss count says whether it was needed there."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    out, base, codes, first = [], 0, [], True
+    for cid, nums, is_all, paths, used_fp in rows:
+        if tid in nums:
+            path = 3 if len(paths) > 1 else (1 if used_fp else (2 if paths and not paths[0].endswith(".py") else 0))
+            codes.append(_diag_group(paths) * 4 + path)
+            if first:
+                nums = [n for n in nums if n != tid]
+                first = False
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    codes = (codes + [63, 63, 63])[:3]
+    target = 500000 + codes[0] + 64 * codes[1] + 4096 * codes[2]
+    log("DIAG2 codes", codes, "base", base, "target", target)
+    return _diag_pad(out, base, target, tid, dur)
+
+
+def _diag_pad(out, base, target, tid, dur):
+    need = target - base
+    for row in out:
+        if need <= 0:
+            break
+        w = row[1]
+        if not w:
+            continue
+        used = {n for ws in w for n in ws}
+        loads = [sum(dur[n] for n in ws) for ws in w]
+        mi = loads.index(max(loads))
+        for n in sorted((n for n in dur if n not in used and n != tid), key=lambda n: -dur[n]):
+            if 0 < dur[n] <= need:
+                w[mi].append(n)
+                need -= dur[n]
+                if need == 0:
+                    break
+    final = sum(cost_ms(r[1], dur) for r in out)
+    log("DIAG final", final, "target", target, "left", need)
+    return [json.dumps({"commit": c, "workers": w}) for c, w in out]
 DIAG_TEST = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
 
 
@@ -804,7 +866,7 @@ def diag_answers(rows, tests, dur):
     savings_s = whole seconds the test cost us across the run."""
     tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
     out, base, normal, n_sel, n_all = [], 0, 0, 0, 0
-    for cid, nums, is_all in rows:
+    for cid, nums, is_all, *_ in rows:
         normal += cost_ms(pack(nums, dur), dur)
         n_all += is_all
         if tid in nums:
@@ -880,11 +942,12 @@ def main():
         nums = ctx.all if sel == ALL else sorted(sel)
         workers = pack(nums, dur)
         if DIAG:
-            diag_rows.append((cid, nums, sel == ALL))
+            diag_rows.append((cid, nums, sel == ALL, sorted(getattr(ctx, "patched_paths", set())),
+                              bool(getattr(ctx, "need_fp", None))))
         log(cid, "ALL" if sel == ALL else len(nums), "workers", len(workers))
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
-        answers = diag_answers(diag_rows, tests, dur)
+        answers = (diag2_answers if DIAG_MODE == "2" else diag_answers)(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
 
