@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -9706,7 +9706,7 @@
+ LIMIT 100;
+ WITH "date_dim_2" AS (
+   SELECT
+-    "date_dim"."d_date_sk" AS "d_date_sk",
++    "DATE_DIM"."d_date_sk" AS "d_date_sk",
+     "date_dim"."d_date_id" AS "d_date_id",
+     "date_dim"."d_date" AS "d_date",
+     "date_dim"."d_month_seq" AS "d_month_seq",

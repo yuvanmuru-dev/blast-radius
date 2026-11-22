@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -951,7 +951,7 @@
+     SELECT
+       "supplier"."s_suppkey" AS "s_suppkey"
+     FROM "supplier" AS "supplier"
+-    WHERE
++     WHERE
+       "supplier"."s_comment" LIKE '%Customer%Complaints%'
+   )
+ GROUP BY

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -5104,7 +5104,7 @@
+           inv2.d_moy,
+           inv2.mean,
+           inv2.cov;
+-WITH "foo" AS (
++WITH "FOO" AS (
+   SELECT
+     "warehouse"."w_warehouse_sk" AS "w_warehouse_sk",
+     "item"."i_item_sk" AS "i_item_sk",

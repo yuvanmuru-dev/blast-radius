@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -1038,6 +1038,7 @@
+         o_totalprice
+ order by
+         o_totalprice desc,
++# execute: false
+         o_orderdate
+ limit
+         100;

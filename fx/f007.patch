@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -379,7 +379,7 @@
+   "n2"."n_name" AS "cust_nation",
+   EXTRACT(YEAR FROM CAST("lineitem"."l_shipdate" AS DATE)) AS "l_year",
+   SUM("lineitem"."l_extendedprice" * (
+-    1 - "lineitem"."l_discount"
++     1 - "lineitem"."l_discount"
+   )) AS "revenue"
+ FROM "supplier" AS "supplier"
+ JOIN "lineitem" AS "lineitem"

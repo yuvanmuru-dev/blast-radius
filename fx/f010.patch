@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -3079,7 +3079,7 @@
+           i_manufact
+ LIMIT 100;
+ SELECT
+-  "item"."i_brand_id" AS "brand_id",
++  "ITEM"."i_brand_id" AS "brand_id",
+   "item"."i_brand" AS "brand",
+   "item"."i_manufact_id" AS "i_manufact_id",
+   "item"."i_manufact" AS "i_manufact",

@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -386,6 +386,7 @@
+   ON "lineitem"."l_suppkey" = "supplier"."s_suppkey"
+   AND CAST("lineitem"."l_shipdate" AS DATE) <= CAST('1996-12-31' AS DATE)
+   AND CAST("lineitem"."l_shipdate" AS DATE) >= CAST('1995-01-01' AS DATE)
++-- note
+ JOIN "nation" AS "n1"
+   ON (
+     "n1"."n_name" = 'FRANCE' OR "n1"."n_name" = 'GERMANY'

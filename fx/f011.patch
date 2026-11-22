@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -2260,7 +2260,7 @@
+          revenueratio
+ LIMIT 100;
+ SELECT
+-  "item"."i_item_id" AS "i_item_id",
++  "ITEM"."i_item_id" AS "i_item_id",
+   "item"."i_item_desc" AS "i_item_desc",
+   "item"."i_category" AS "i_category",
+   "item"."i_class" AS "i_class",

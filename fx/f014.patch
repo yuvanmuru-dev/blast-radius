@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -11594,7 +11594,7 @@
+ ORDER BY i_item_id
+ LIMIT 100;
+ SELECT
+-  "item"."i_item_id" AS "i_item_id",
++  "ITEM"."i_item_id" AS "i_item_id",
+   "item"."i_item_desc" AS "i_item_desc",
+   "item"."i_current_price" AS "i_current_price"
+ FROM "item" AS "item"

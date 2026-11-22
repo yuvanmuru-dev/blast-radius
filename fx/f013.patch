@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index 0000000..1111111 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -12415,7 +12415,7 @@
+ LIMIT 100;
+ WITH "tmp1" AS (
+   SELECT
+-    "item"."i_category" AS "i_category",
++    "ITEM"."i_category" AS "i_category",
+     "item"."i_class" AS "i_class",
+     "item"."i_brand" AS "i_brand",
+     "store"."s_store_name" AS "s_store_name",
