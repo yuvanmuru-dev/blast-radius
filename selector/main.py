@@ -1103,7 +1103,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5", "6", "7", "8")
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5", "6", "7", "8", "9")
 DIAG_MODE = os.environ.get("BR_DIAG", "0")
 DIAG_GROUPS = [
     ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
@@ -1343,6 +1343,26 @@ def diag8_answers(rows, tests, dur):
     return _diag_pad(out, base, target, tid, dur)
 
 
+def diag9_answers(rows, tests, dur):
+    """Practice diagnostic 9 (selections unchanged): commits whose selection
+    went through the import-time fingerprint. Total mod 65536 =
+    n_fp (6b) | their total cost in whole seconds (10b) << 6."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    out, base, n_fp, c_fp = [], 0, 0, 0
+    for cid, nums, is_all, paths, used_fp, dfiles, fpfiles in rows:
+        c = cost_ms(pack(nums, dur), dur)
+        if used_fp:
+            n_fp += 1
+            c_fp += c
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    code = min(n_fp, 63) | (min(c_fp // 1000, 1023) << 6)
+    log("DIAG9 n_fp", n_fp, "c_fp", c_fp, "code", code)
+    target = base + ((code - base) % 65536)
+    return _diag_pad(out, base, target, tid, dur)
+
+
 def _diag_pad(out, base, target, tid, dur):
     need = target - base
     for row in out:
@@ -1473,7 +1493,7 @@ def main():
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
         answers = (lambda r, t, d: diag5_answers(r, t, d, diag_texts)) if DIAG_MODE == "5" else \
-            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers, "6": diag6_answers, "7": diag7_answers, "8": diag8_answers}.get(DIAG_MODE, diag_answers)
+            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers, "6": diag6_answers, "7": diag7_answers, "8": diag8_answers, "9": diag9_answers}.get(DIAG_MODE, diag_answers)
         answers = answers(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
