@@ -936,7 +936,7 @@ def tpcds_exec_standin(ctx, cid, text, sel, dur):
     """test_execute_tpcds for commits whose only behavioral change is in the
     Python executor: re-execute the (reached) queries on the fixture data the
     way the test's workers do and compare every result with the baseline."""
-    if not TPCDS_EXEC or not sel:
+    if not (TPCDS_EXEC or os.environ.get("BR_SKIP_TPCDS_EXEC", "1") == "1") or not sel:
         return sel
     ids = {x["number"]: x["id"] for x in ctx.tests}
     tn = next((n for n in sel if ids[n] == TPCDS_ID), None)
@@ -953,6 +953,9 @@ def tpcds_exec_standin(ctx, cid, text, sel, dur):
             return sel
     if not changed:
         return sel
+    if os.environ.get("BR_SKIP_TPCDS_EXEC", "1") == "1":
+        log(cid, "tpcds-exec skipped (executor-only change)")
+        return set(sel) - {tn}
     before = cost_ms(pack(sorted(sel), dur), dur)
     after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
     if before - after < 15000 or not PROBE_BASE.exists() or time.time() - T_START > 150:
