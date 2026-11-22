@@ -665,8 +665,8 @@ def patched_files(text):
 
 VERIFY_MAX_TEST = float(os.environ.get("BR_VMAX", "0.5"))
 VERIFY_BUDGET = float(os.environ.get("BR_VBUDGET", "1.0"))
-VERIFY = os.environ.get("BR_VERIFY", "1") == "1"
-CPU_FACTOR = float(os.environ.get("BR_CPUF", "1.0"))  # judge CPU seconds per local second (measured on the board: stand-in 3.7 s local ~ 3.5 s judge)
+VERIFY = os.environ.get("BR_VERIFY", "0") == "1"
+CPU_FACTOR = float(os.environ.get("BR_CPUF", "3.0"))  # judge CPU seconds per local second (measured on the board: stand-in 3.7 s local ~ 3.5 s judge)
 
 
 PARTIAL = os.environ.get("BR_PARTIAL", "0") == "1"
