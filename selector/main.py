@@ -169,9 +169,84 @@ def select_file(ctx, fp):
     if ctx.map is None:
         return ALL
     b = ctx.map.opened(path)
+    if b and path in TPC_FIXTURES:
+        b = tpc_fixture_refine(ctx, path, old, new, b)
     if b:
         b |= ctx.map.always
     return rules.bits_to_set(b)
+
+
+TPC_FIXTURES = {
+    "tests/fixtures/optimizer/tpc-h/tpc-h.sql": "h",
+    "tests/fixtures/optimizer/tpc-ds/tpc-ds.sql": "ds",
+}
+TPC_EXEC = "tests/test_executor.py::TestExecutor::"
+# which part of each fixture a TestExecutor test reads (all of them load both
+# files in setUpClass, so they all fail if either file stops loading)
+TPC_USES = {
+    "test_execute_tpch": ("h", "meta_sql"),
+    "test_optimized_tpch": ("h", "sql_expected"),
+    "test_execute_tpcds": ("ds", "meta_sql"),
+}
+TPC_REFINE = os.environ.get("BR_TPC_REFINE", "1") == "1"
+
+
+def _tpc_pairs(text):
+    """Exact copy of tests/helpers.py load_sql_fixture_pairs (text mode read)."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    filtered = "\n".join([line for line in text.splitlines() if line and not line.startswith("--")])
+    statements = filtered.split(";")
+    size = len(statements)
+    out = []
+    for i in range(0, size, 2):
+        if i + 1 < size:
+            sql = statements[i].strip()
+            meta = {}
+            sql_lines = sql.split("\n")
+            j = 0
+            while sql_lines[j].startswith("#"):
+                key, val = sql_lines[j].split(":", maxsplit=1)
+                meta[key.lstrip("#").strip()] = val.strip()
+                j += 1
+            sql = "\n".join(sql_lines[j:])
+            out.append((meta, sql, statements[i + 1].strip()))
+    return out
+
+
+def tpc_fixture_refine(ctx, path, old, new, bits):
+    """A TPC fixture edit only reaches TestExecutor tests through setUpClass:
+    keep the ones that read a changed part, drop the rest when both files
+    still load."""
+    if not TPC_REFINE or ctx.patched_paths & {"tests/helpers.py", "tests/test_executor.py"}:
+        return bits
+    try:
+        o = _tpc_pairs(old)
+        n = _tpc_pairs(new)
+        for other, which in TPC_FIXTURES.items():
+            if other != path:
+                other_text = read_src(other)
+                if other_text is None:
+                    return bits
+                if other in ctx.patched_new:
+                    other_text = ctx.patched_new[other]
+                _tpc_pairs(other_text)
+    except Exception:
+        return bits  # setUpClass would fail: every TestExecutor test is affected
+    changed = {
+        "meta_sql": [(m, q) for m, q, _ in o] != [(m, q) for m, q, _ in n],
+        "sql_expected": [(q, e) for _, q, e in o] != [(q, e) for _, q, e in n],
+    }
+    which = TPC_FIXTURES[path]
+    for t in ctx.tests:
+        tid = t["id"]
+        if not tid.startswith(TPC_EXEC) or not (bits >> t["number"]) & 1:
+            continue
+        name = tid[len(TPC_EXEC):]
+        use = TPC_USES.get(name)
+        if use and use[0] == which and changed[use[1]]:
+            continue
+        bits &= ~(1 << t["number"])
+    return bits
 
 
 def select_commit(ctx, text, cid="x"):
@@ -184,6 +259,16 @@ def select_commit(ctx, text, cid="x"):
         ctx.map.span_log = []
         ctx.map.nonspan = False
     out = set()
+    ctx.patched_paths = {fp.path for fp in files}
+    ctx.patched_new = {}
+    for fp in files:
+        if fp.path in TPC_FIXTURES and not fp.binary and fp.old == fp.new:
+            o = read_src(fp.path)
+            if o is not None:
+                try:
+                    ctx.patched_new[fp.path] = difflib2.apply(o, fp)
+                except Exception:
+                    pass
     for fp in files:
         s = select_file(ctx, fp)
         if s == ALL:
