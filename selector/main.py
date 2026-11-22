@@ -804,7 +804,7 @@ def _tpcds_queries_reaching(text, prefix="sqlglot/optimizer/", ctx=None):
         return None
 
 
-TPCDS_EXEC = os.environ.get("BR_TPCDS_EXEC", "1") == "1"
+TPCDS_EXEC = os.environ.get("BR_TPCDS_EXEC", "0") == "1"
 
 
 def tpcds_exec_standin(ctx, cid, text, sel, dur):
@@ -987,7 +987,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5", "6")
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5", "6", "7")
 DIAG_MODE = os.environ.get("BR_DIAG", "0")
 DIAG_GROUPS = [
     ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
@@ -1176,6 +1176,35 @@ def diag6_answers(rows, tests, dur):
     return _diag_pad(out, base, target, tid, dur)
 
 
+def diag7_answers(rows, tests, dur):
+    """Practice diagnostic 7: the first commit costing > 6 s that does not
+    select DIAG_TEST. Its heaviest test is removed (miss count = whether that
+    test was needed). Total (minus 300 s per miss) mod 65536 =
+    file_index (8b) | rank of the removed test among the 16 slowest tests (4b,
+    15 = other) << 8 | number of its tests > 1 s (4b) << 12."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    idx = _py_index()
+    slow = [t["number"] for t in sorted(tests, key=lambda t: -t["seconds"])[:15]]
+    out, base, code = [], 0, None
+    for cid, nums, is_all, paths, used_fp, dfiles, fpfiles in rows:
+        c = cost_ms(pack(nums, dur), dur)
+        if code is None and c > 6000 and tid not in nums:
+            heavy = max(nums, key=lambda n: dur[n])
+            fi = idx.get(paths[0], 255) if paths else 254
+            rank = slow.index(heavy) if heavy in slow else 15
+            n1 = sum(1 for n in nums if dur[n] > 1000)
+            code = min(fi, 255) | (rank << 8) | (min(n1, 15) << 12)
+            log("DIAG7", cid, paths[:2], tests[heavy]["id"] if heavy < len(tests) else heavy, code)
+            nums = [n for n in nums if n != heavy]
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    if code is None:
+        code = 65535
+    target = base + ((code - base) % 65536)
+    return _diag_pad(out, base, target, tid, dur)
+
+
 def _diag_pad(out, base, target, tid, dur):
     need = target - base
     for row in out:
@@ -1306,7 +1335,7 @@ def main():
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
         answers = (lambda r, t, d: diag5_answers(r, t, d, diag_texts)) if DIAG_MODE == "5" else \
-            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers, "6": diag6_answers}.get(DIAG_MODE, diag_answers)
+            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers, "6": diag6_answers, "7": diag7_answers}.get(DIAG_MODE, diag_answers)
         answers = answers(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")

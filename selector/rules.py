@@ -581,10 +581,16 @@ def _inert_stmt(st):
     return None, False
 
 
+def _n_stmts(node):
+    return sum(1 for n in ast.walk(node) if isinstance(n, ast.stmt))
+
+
 def inert_insertion(onode, nnode):
     """New function = old function plus dead statements only."""
     if not isinstance(onode, (ast.FunctionDef, ast.AsyncFunctionDef)) or type(onode) is not type(nnode):
         return False
+    if _n_stmts(nnode) <= _n_stmts(onode):
+        return False  # nothing was added
     names_old = set()
     for n in ast.walk(onode):
         if isinstance(n, ast.Name):
