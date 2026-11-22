@@ -888,7 +888,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5")
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5", "6")
 DIAG_MODE = os.environ.get("BR_DIAG", "0")
 DIAG_GROUPS = [
     ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
@@ -1056,6 +1056,27 @@ def diag5_answers(rows, tests, dur, texts):
     return _diag_pad(out, base, target, tid, dur)
 
 
+def diag6_answers(rows, tests, dur):
+    """Practice diagnostic 6: commits whose selection costs <= 6 s run nothing
+    (miss count = how many of them really break a test). Total (minus 300 s per
+    miss) mod 65536 = n_cheap | (their total cost in whole seconds) << 6."""
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    out, base, n_cheap, c_cheap = [], 0, 0, 0
+    for cid, nums, *_ in rows:
+        c = cost_ms(pack(nums, dur), dur)
+        if nums and c <= 6000:
+            n_cheap += 1
+            c_cheap += c
+            nums = []
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    code = min(n_cheap, 63) | (min(c_cheap // 1000, 1023) << 6)  # 16 bits
+    target = base + ((code - base) % 65536)  # decode: total % 65536
+    log("DIAG6 n_cheap", n_cheap, "c_cheap", c_cheap, "base", base, "code", code, "target", target)
+    return _diag_pad(out, base, target, tid, dur)
+
+
 def _diag_pad(out, base, target, tid, dur):
     need = target - base
     for row in out:
@@ -1178,7 +1199,7 @@ def main():
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
         answers = (lambda r, t, d: diag5_answers(r, t, d, diag_texts)) if DIAG_MODE == "5" else \
-            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers}.get(DIAG_MODE, diag_answers)
+            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers, "6": diag6_answers}.get(DIAG_MODE, diag_answers)
         answers = answers(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
