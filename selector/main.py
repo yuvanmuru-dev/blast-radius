@@ -180,6 +180,9 @@ def select_commit(ctx, text, cid="x"):
         return ALL
     ctx.need_fp = []
     ctx.need_fp_src = {}
+    if ctx.map is not None:
+        ctx.map.span_log = []
+        ctx.map.nonspan = False
     out = set()
     for fp in files:
         s = select_file(ctx, fp)
@@ -317,6 +320,7 @@ def fingerprint_select(ctx, text, cid):
     """Class/module-level edits: diff the patched import-time state against the
     baseline and select tests that use any changed class or name."""
     M = ctx.map
+    M.nonspan = True
     base = _fp_base()
     files = patched_files(text)
     # hash every module: an import can also mutate state in modules it imports
@@ -424,6 +428,85 @@ VERIFY = os.environ.get("BR_VERIFY", "0") == "1"
 CPU_FACTOR = float(os.environ.get("BR_CPUF", "3.0"))  # judge CPU seconds per local second (measured)
 
 
+PARTIAL = os.environ.get("BR_PARTIAL", "1") == "1"
+UNITS_FILE = Path(os.environ.get("BR_UNITS", str(HERE.parent / "maps" / "units.json.gz")))
+HEAVY_ATTR = {"test_execute_tpcds": "tpcds_sqls", "test_execute_tpch": "tpch_sqls", "test_optimized_tpch": "tpch_sqls"}
+_UNITS = [None]
+
+
+def _units():
+    if _UNITS[0] is None:
+        import gzip
+        raw = json.load(gzip.open(UNITS_FILE, "rt"))
+        idx = {}
+        for test, units in raw.items():
+            m = {}
+            for i, lines in enumerate(units):
+                for f, ls in lines.items():
+                    for l in ls:
+                        m.setdefault((f, l), set()).add(i)
+            idx[test] = m
+        _UNITS[0] = idx
+    return _UNITS[0]
+
+
+def partial_heavy(ctx, cid, text, sel, dur, deadline):
+    """Heavy TPC tests reached only through line spans: re-run just the queries
+    whose own lines the patch touches; drop the test if they all pass."""
+    M = ctx.map
+    if M is None or M.nonspan or not M.span_log or time.time() > deadline or not UNITS_FILE.exists():
+        return sel
+    tests = {x["number"]: x for x in ctx.tests}
+    heavy = [n for n in sel if tests[n]["id"].startswith("tests/test_executor.py::TestExecutor::")
+             and tests[n]["id"].rsplit("::", 1)[1] in HEAVY_ATTR]
+    if not heavy:
+        return sel
+    units = _units()
+    plan = {}
+    for n in heavy:
+        name = tests[n]["id"].rsplit("::", 1)[1]
+        um = units.get(name)
+        if not um:
+            continue
+        bit = 1 << n
+        q, ok = set(), True
+        for f, lo, hi in M.span_log:
+            tab = M.f.get(f, {})
+            for l in range(lo, hi + 1):
+                i = tab.get(l)
+                if i is None or not (M.sets[i] & bit):
+                    continue
+                us = um.get((f, l))
+                if not us:
+                    ok = False  # reached only outside the per-query parts (e.g. import)
+                    break
+                q |= us
+            if not ok:
+                break
+        if ok and q:
+            plan[n] = (name, sorted(q))
+    if not plan:
+        return sel
+    # cost: interpreter + imports + setUpClass ~2.5 s, plus ~0.4 s per query
+    est = CPU_FACTOR * (2500 + 400 * sum(len(q) for _, q in plan.values()))
+    before = cost_ms(pack(sel, dur), dur)
+    after = cost_ms(pack(set(sel) - set(plan), dur), dur)
+    if before - after < 1.5 * est:
+        log(cid, "partial skipped", {tests[n]["id"].rsplit("::", 1)[1]: len(q) for n, (_, q) in plan.items()})
+        return sel
+    files = patched_files(text)
+    ov = verify.build_overlay(SRC, "/tmp/ov", files)
+    try:
+        req = [(n, tests[n]["id"], tests[n]["seconds"], {HEAVY_ATTR[name]: q}) for n, (name, q) in plan.items()]
+        failed = verify.run(ov, req, timeout=max(10.0, min(deadline - time.time(), 90.0)))
+    finally:
+        import shutil
+        shutil.rmtree(ov, ignore_errors=True)
+    dropped = set(plan) - failed
+    log(cid, "partial", {tests[n]["id"].rsplit("::", 1)[1]: len(q) for n, (_, q) in plan.items()}, "dropped", len(dropped))
+    return set(sel) - dropped
+
+
 def cost_ms(workers, dur):
     return (max(sum(dur[n] for n in w) for w in workers) + WORKER_MS * len(workers)) if workers else 0
 
@@ -471,6 +554,11 @@ def main():
         try:
             text = patch.read_text(encoding="utf-8", errors="replace")
             sel = select_commit(ctx, text, cid)
+            if sel != ALL and PARTIAL:
+                try:
+                    sel = partial_heavy(ctx, cid, text, sel, dur, deadline)
+                except Exception as e:
+                    log(cid, "partial error", repr(e))
             if sel != ALL:
                 try:
                     sel = maybe_verify(ctx, cid, text, sel, dur, deadline)

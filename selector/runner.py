@@ -65,7 +65,12 @@ def main():
 
     groups = {}  # (module, class) -> [(num, method, secs)]
     order = []
-    for num, tid, secs in sorted(req):
+    partial = {}
+    for ent in sorted(req, key=lambda e: e[0]):
+        num, tid, secs = ent[0], ent[1], ent[2]
+        if len(ent) > 3 and ent[3]:
+            for attr, idx in ent[3].items():
+                partial.setdefault(attr, set()).update(idx)
         parts = tid.split("::")
         if len(parts) != 3 or not parts[0].endswith(".py"):
             continue  # unknown shape: never confirmed, so kept
@@ -96,6 +101,16 @@ def main():
             continue
         items = groups[key]
         budget = sum(s for _, _, s in items) * 4 + 5
+        if partial and hasattr(cls, "setUpClass"):
+            orig = cls.setUpClass.__func__
+
+            def _setup(c, _orig=orig):
+                _orig(c)
+                for attr, idx in partial.items():
+                    full = getattr(c, attr)
+                    setattr(c, attr, [full[i] for i in sorted(idx) if i < len(full)])
+
+            cls.setUpClass = classmethod(_setup)
         r, w = os.pipe()
         pid = os.fork()
         if pid == 0:

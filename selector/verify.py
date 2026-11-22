@@ -59,11 +59,11 @@ def build_overlay(src, root, files):
 def run(overlay, tests, timeout):
     """tests: list of (number, id, seconds). Returns set of numbers that FAILED
     (or could not be confirmed as passing)."""
-    req = json.dumps([[n, i, s] for n, i, s in tests])
+    req = json.dumps([list(t) for t in tests])
     env = dict(os.environ)
     env.update(SKIP_INTEGRATION="0", PYTHONPATH=str(overlay), PYTHONDONTWRITEBYTECODE="1",
                HOME=env.get("HOME", "/tmp"))
-    nums = {n for n, _, _ in tests}
+    nums = {t[0] for t in tests}
     try:
         p = subprocess.run(
             [sys.executable, str(HERE / "runner.py")],

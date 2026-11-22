@@ -41,7 +41,12 @@ class Map:
             self.always |= 1 << num
         self._file_any = {}
 
+    span_log = None
+    nonspan = False
+
     def lines(self, kind, f, lo, hi):
+        if kind == "f" and self.span_log is not None:
+            self.span_log.append((f, lo, hi))
         tab = (self.m if kind == "m" else self.f).get(f)
         bits = 0
         if not tab:
@@ -58,6 +63,7 @@ class Map:
         return bits
 
     def file_any(self, f):
+        self.nonspan = True
         if f not in self._file_any:
             bits = 0
             for tab in (self.m.get(f, {}), self.f.get(f, {})):
@@ -71,10 +77,12 @@ class Map:
         return self.by_file.get(tf, 0)
 
     def receivers(self, cname):
+        self.nonspan = True
         i = self.r.get(cname)
         return self.sets[i] if i is not None else 0
 
     def opened(self, f):
+        self.nonspan = True
         return self.sets[self.o[f]] if f in self.o else 0
 
 
@@ -285,7 +293,9 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
     plan = []  # (old_node, spans or None)
     need_fp = False
     fallback_bits = 0
-    for old_l, new_l, rem, n_added in hunk_regions(fp):
+    regions = hunk_regions(fp)
+    n_regions = len(regions)
+    for old_l, new_l, rem, n_added in regions:
         code_rem = [l for l in rem if not _is_trivia(old_text[l - 1])]
         code_add = [l for l in new_l if not _is_trivia(new_text[l - 1])]
         if not code_rem and not code_add:
@@ -337,9 +347,13 @@ def select_py(M, path, old, new, fp, ot=None, nt=None):
             need_fp = True
             continue
         spans = None
-        if not isinstance(onode, ast.Lambda) and nnode is not None and stored_names(onode) == stored_names(nnode) \
-                and _expr_only_change(onode, nnode):
-            spans = _spans_for(onode, rem, code_add, old_text)
+        if not isinstance(onode, ast.Lambda) and nnode is not None and stored_names(onode) == stored_names(nnode):
+            if _expr_only_change(onode, nnode):
+                spans = _spans_for(onode, rem, code_add, old_text)
+            elif n_regions == 1 and code_add and not code_rem:
+                spans = _insertion_spans(onode, old_l, new_l, new_text, old_text)
+            elif n_regions == 1 and code_rem and not code_add:
+                spans = _deletion_spans(onode, code_rem, old_text)
         plan.append((onode, nnode, spans))
     # provably equivalent operator swaps (per-site value profile of the whole suite)
     if M.cmp and plan:
@@ -585,3 +599,73 @@ def inert_change(old, new):
         return same_tree(_strip_inert(ast.parse(old)), _strip_inert(ast.parse(new)))
     except SyntaxError:
         return False
+
+
+def _stmts_in(fn):
+    out = []
+    def walk(stmts):
+        for st in stmts:
+            out.append(st)
+            for field in ("body", "orelse", "finalbody", "handlers", "cases"):
+                sub = getattr(st, field, None)
+                if sub and not isinstance(st, FUNC + (ast.ClassDef,)):
+                    walk(sub)
+    walk(fn.body)
+    return out
+
+
+def _stmt_span(st):
+    if isinstance(st, COMPOUND):
+        hs = _header_span(st)
+        return hs if hs else (st.lineno, st.end_lineno)
+    return (st.lineno, st.end_lineno)
+
+
+def _insertion_spans(fn, old_l, new_l, new_text, old_text):
+    """Pure insertion of whole statements inside fn: the new code runs exactly
+    when control reaches the insertion point, i.e. for tests that ran the old
+    statement right after it (or, at the end of a block, the one right before)."""
+    code_new = [l for l in new_l if not _is_trivia(new_text[l - 1])]
+    if not code_new:
+        return []
+    indent = len(new_text[code_new[0] - 1]) - len(new_text[code_new[0] - 1].lstrip())
+    # old line numbers around the insertion point (anchors are k-1, k)
+    if not old_l:
+        return None
+    nxt = max(old_l)
+    prv = min(old_l)
+    stmts = _stmts_in(fn)
+    # skip blank / comment lines to the next real code line
+    n = nxt
+    while n <= len(old_text) and _is_trivia(old_text[n - 1]):
+        n += 1
+    for st in stmts:
+        if st.lineno == n and st.col_offset == indent:
+            return [_stmt_span(st)]
+    p = prv
+    while p >= 1 and _is_trivia(old_text[p - 1]):
+        p -= 1
+    for st in stmts:
+        if st.end_lineno == p and st.col_offset == indent:
+            if isinstance(st, (ast.Return, ast.Raise, ast.Continue, ast.Break)):
+                return []  # unreachable after it
+            return [_stmt_span(st)]
+    return None
+
+
+def _deletion_spans(fn, code_rem, old_text):
+    """Pure deletion of whole statements: affects tests that ran them."""
+    rem = set(code_rem)
+    out = []
+    for st in _stmts_in(fn):
+        lines = {l for l in range(st.lineno, st.end_lineno + 1) if not _is_trivia(old_text[l - 1])}
+        if lines and lines <= rem:
+            # outermost fully-deleted statements only
+            if not any(o[0] <= st.lineno and st.end_lineno <= o[1] for o in out):
+                out.append((st.lineno, st.end_lineno))
+    covered = set()
+    for lo, hi in out:
+        covered |= {l for l in range(lo, hi + 1)}
+    if not out or not rem <= covered:
+        return None
+    return out
