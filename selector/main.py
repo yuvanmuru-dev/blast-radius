@@ -199,6 +199,7 @@ def select_commit(ctx, text, cid="x"):
 
 NARROW_ATTRS = os.environ.get("BR_NARROW", "1") == "1"
 KEYED = os.environ.get("BR_KEYED", "1") == "1"
+FUNC_BODY = os.environ.get("BR_FUNC_BODY", "1") == "1"
 FP_ALL = os.environ.get("BR_FP_ALL", "1") == "1"
 FP_BASE = Path(os.environ.get("BR_FPBASE", str(HERE.parent / "maps" / "fp_base.json")))
 _FPB = [None]
@@ -360,10 +361,25 @@ def fingerprint_select(ctx, text, cid):
     base_entries = base.get("entries", {})
     keyed_bits = 0
     keyed_log = []
+    bextra = base.get("extra", {})
+    nextra = new.get("extra", {})
     for k in set(bfp) | set(nfp):
         a, b = bfp.get(k), nfp.get(k)
         if a == b:
             continue
+        bx, nx = bextra.get(k), nextra.get(k)
+        if FUNC_BODY and bx and nx:
+            bf, nf = bx.get("fn"), nx.get("fn")
+            if bf and nf and bf[0] == nf[0] and bf[3] == nf[3]:
+                # same function (name + signature): only defaults / closure values
+                # changed, which matter only when its body runs
+                bits |= M.lines("f", bf[0], bf[1], bf[2])
+                keyed_log.append(("fn", k.rsplit(":", 1)[-1], 0))
+                continue
+            if "sh" in bx and "sh" in nx and bx["sh"] == nx["sh"] and not bx["anon"] and not nx["anon"]:
+                # container changed only through named functions it holds;
+                # those functions are keys of their own and handled there
+                continue
         owner, _, kind = (a or b)
         if (a and b) and a[2] != b[2]:
             kind = "F"

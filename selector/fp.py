@@ -45,6 +45,10 @@ def h(v, depth=0, seen=None):
         return "C:" + t.__name__
     seen = seen | {id(v)}
     if isinstance(v, (types.FunctionType,)):
+        if SHALLOW[0]:
+            if "<" in v.__qualname__:
+                SHALLOW[1] = True  # anonymous function inside: cannot defer to its own key
+            return "F:" + v.__qualname__ + "|" + _code_sig(v.__code__)
         parts = [v.__qualname__, _code_sig(v.__code__)]
         if v.__defaults__:
             parts.append(h(v.__defaults__, depth + 1, seen))
@@ -132,6 +136,35 @@ def all_modules(root):
 
 
 DICTS = {}
+SHALLOW = [False, False]
+VALUES = {}  # key -> value (for shallow / function info on demand)
+
+
+def shallow(v):
+    SHALLOW[0], SHALLOW[1] = True, False
+    try:
+        d = digest(h(v))
+    finally:
+        SHALLOW[0] = False
+    return d, SHALLOW[1]
+
+
+def funcinfo(v, root):
+    f = v
+    if isinstance(f, (staticmethod, classmethod)):
+        f = f.__func__
+    if not isinstance(f, types.FunctionType):
+        return None
+    c = f.__code__
+    fn = os.path.realpath(c.co_filename)
+    rootr = os.path.realpath(root) + os.sep
+    if not fn.startswith(rootr):
+        rootr = root.rstrip(os.sep) + os.sep
+        if not c.co_filename.startswith(rootr):
+            return None
+        fn = c.co_filename
+    last = max((l for _, _, l in c.co_lines() if l is not None), default=c.co_firstlineno)
+    return [fn[len(rootr):], c.co_firstlineno, last, digest(f.__qualname__ + "|" + _code_sig(c))]
 
 
 def entries(val):
@@ -193,6 +226,7 @@ def fingerprint(root, modules, key_order=None):
                 continue
             kind = "F" if isinstance(val, (types.FunctionType, staticmethod, classmethod, property, type)) else "V"
             out[f"{key}.{attr}"] = (cname, digest(h(val)), kind)
+            VALUES[f"{key}.{attr}"] = val
             if type(val) is dict:
                 DICTS[f"{key}.{attr}"] = val
             if isinstance(val, type) and str(getattr(val, "__module__", "")).startswith("sqlglot"):
@@ -212,6 +246,7 @@ def fingerprint(root, modules, key_order=None):
                 continue
             else:
                 out[key] = ("", digest(h(val)), "V")
+                VALUES[key] = val
                 if type(val) is dict:
                     DICTS[key] = val
     return out, failed
@@ -242,8 +277,23 @@ def main():
             b = base.get(k)
             if b is not None and b[1] != fp[k][1]:
                 ent[k] = entries(v)
+    extra = {}
+    if basep == "all":
+        keys = list(VALUES)
+    elif basep:
+        keys = [k for k in VALUES if base.get(k) is None or base[k][1] != fp[k][1]]
+    else:
+        keys = []
+    for k in keys:
+        v = VALUES[k]
+        fi = funcinfo(v, root)
+        if fi is not None:
+            extra[k] = {"fn": fi}
+        elif fp[k][2] == "V" or fp[k][0] == "":
+            sd, anon = shallow(v)
+            extra[k] = {"sh": sd, "anon": anon}
     with open(outp, "w") as f:
-        json.dump({"fp": fp, "failed": failed, "entries": ent}, f)
+        json.dump({"fp": fp, "failed": failed, "entries": ent, "extra": extra}, f)
 
 
 if __name__ == "__main__":
