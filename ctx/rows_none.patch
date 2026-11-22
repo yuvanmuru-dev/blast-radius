@@ -1,0 +1,12 @@
+diff --git a/sqlglot/executor/context.py b/sqlglot/executor/context.py
+index 0000000..1111111 100644
+--- a/sqlglot/executor/context.py
++++ b/sqlglot/executor/context.py
+@@ -87,6 +87,7 @@
+             table.rows = rows
+ 
+     def sort(self, key) -> None:
++        rows = None
+         def sort_key(row: tuple) -> tuple:
+             self.set_row(row)
+             return tuple((t is None, t) for t in self.eval_tuple(key))
