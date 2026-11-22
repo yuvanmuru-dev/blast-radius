@@ -253,6 +253,25 @@ def source_lines_with(tokens):
 
 
 _IMPORTERS = [None]
+
+
+def _import_time_nodes(tree):
+    """Nodes that run when the module is imported: everything outside
+    function/lambda bodies (class bodies and module-level blocks included)."""
+    import ast as _ast
+    out = []
+    stack = [tree]
+    while stack:
+        n = stack.pop()
+        out.append(n)
+        for ch in _ast.iter_child_nodes(n):
+            if isinstance(ch, (_ast.FunctionDef, _ast.AsyncFunctionDef, _ast.Lambda)):
+                # decorators and defaults run at import, bodies do not
+                stack.extend(getattr(ch, "decorator_list", []))
+                stack.append(ch.args)
+                continue
+            stack.append(ch)
+    return out
 IMPORTERS_FILE = Path(os.environ.get("BR_IMPORTERS", str(HERE.parent / "maps" / "importers.json")))
 
 
@@ -283,7 +302,7 @@ def affected_modules(paths):
                     tree = _ast.parse(p.read_text(encoding="utf-8"))
                 except SyntaxError:
                     continue
-                for n in _ast.walk(tree):
+                for n in _import_time_nodes(tree):
                     targets = []
                     if isinstance(n, _ast.Import):
                         targets = [a.name for a in n.names]
@@ -318,6 +337,28 @@ def affected_modules(paths):
     return sorted(seen)
 
 
+def closure_modules(paths):
+    """Modules whose import-time state can depend on the changed modules: every
+    module that imports them at import time (transitively), plus everything those
+    import (registries they may write into)."""
+    rev = affected_modules(paths)
+    imp = _IMPORTERS[0]
+    fwd = {}
+    for m, users in imp.items():
+        for u in users:
+            fwd.setdefault(u, set()).add(m)
+    seen = set(rev)
+    todo = list(rev)
+    while todo:
+        m = todo.pop()
+        for x in fwd.get(m, ()):
+            if x not in seen:
+                seen.add(x)
+                todo.append(x)
+    known = {k.split(":", 1)[0] for k in _fp_base()["fp"]}
+    return sorted(seen & known)
+
+
 def fingerprint_select(ctx, text, cid):
     """Class/module-level edits: diff the patched import-time state against the
     baseline and select tests that use any changed class or name."""
@@ -327,14 +368,15 @@ def fingerprint_select(ctx, text, cid):
     files = patched_files(text)
     # hash every module: an import can also mutate state in modules it imports
     # (registries), not only in modules that import it
-    mods = sorted({k.split(":", 1)[0] for k in _fp_base()["fp"]}) if FP_ALL else affected_modules(ctx.need_fp)
+    mods = closure_modules(ctx.need_fp) if os.environ.get("BR_FP_MODE", "closure") == "closure" \
+        else sorted({k.split(":", 1)[0] for k in _fp_base()["fp"]})
     ov = verify.build_overlay(SRC, "/tmp/ov", files)
     outp = "/tmp/fp_out.json"
     try:
         env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1",
                    BR_FP_COMPARE=str(FP_BASE))
         import subprocess
-        r = subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), outp] + ([] if FP_ALL else mods), cwd=str(ov), env=env,
+        r = subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), outp] + mods, cwd=str(ov), env=env,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
         if r.returncode != 0:
             return ALL
@@ -352,7 +394,11 @@ def fingerprint_select(ctx, text, cid):
     full = base["fp"]
     nfp = new["fp"]
     # keys the subset run should have produced, plus anything it did produce
-    bfp = {k: v for k, v in full.items() if k.split(":", 1)[0] in modset}
+    # deletions are looked for only in the edited modules themselves; elsewhere
+    # compare what the run produced (a subset run reaches some dynamically built
+    # classes under other key paths)
+    edited = {_modname(p) for p in ctx.need_fp}
+    bfp = {k: v for k, v in full.items() if k.split(":", 1)[0] in edited}
     for k in nfp:
         if k in full:
             bfp[k] = full[k]
@@ -414,6 +460,9 @@ def fingerprint_select(ctx, text, cid):
                     keyed_log.append((mod.rsplit(".", 1)[-1], gname, len(changed)))
                     continue
             glob_tokens.add((gname,))
+    if os.environ.get("BR_FP_DUMP"):
+        with open(os.environ["BR_FP_DUMP"], "a") as _f:
+            _f.write(json.dumps([cid, sorted(k for k in set(bfp) | set(nfp) if bfp.get(k) != nfp.get(k) and k.split(":", 1)[0] not in failed_now)]) + "\n")
     log(cid, "fp changed", {o: sorted(e["attrs"])[:4] for o, e in list(by_owner.items())[:4]}, sorted(glob_tokens)[:4],
         "keyed", keyed_log[:4])
     bits |= keyed_bits
