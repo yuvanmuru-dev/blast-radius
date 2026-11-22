@@ -85,12 +85,23 @@ def main():
         # exactly as execute() makes it (from the pickled parse, with ensure_schema)
         from sqlglot.optimizer import optimize
         from sqlglot.schema import ensure_schema
-        trees = {}
+        import time
+        from sqlglot.executor.python import PythonExecutor
+        from sqlglot.executor.table import ensure_tables
+        from sqlglot.planner import Plan
+        trees, times = {}, {}
         for i, sql in todo:
             e = pickle.loads(pickle.dumps(parse_one(sql)))
             trees[i] = optimize(e, ensure_schema(TPCDS_SCHEMA), leave_tables_isolated=True)
+            names = [t.name for t in find_tables(e)]
+            t0 = time.process_time()
+            try:
+                PythonExecutor(tables=ensure_tables({n: table(n) for n in names})).execute(Plan(trees[i].copy()))
+            except BaseException:  # noqa: BLE001
+                pass
+            times[i] = time.process_time() - t0
         with open(dump_path, "wb") as f:
-            pickle.dump(trees, f)
+            pickle.dump({"trees": trees, "times": times}, f)
         print(json.dumps({"dumped": len(trees)}))
         return
     fast = None
@@ -104,7 +115,10 @@ def main():
         from sqlglot.planner import Plan
         from sqlglot.schema import ensure_schema
         with open(fast_path, "rb") as f:
-            fast = pickle.load(f)
+            blob = pickle.load(f)
+        fast, times = blob["trees"], blob["times"]
+        # cheapest queries first: a difference is found for less
+        todo.sort(key=lambda it: times.get(it[0], 1e9))
 
         def run_fast(i, tables, schema):
             tables_ = ensure_tables(tables, dialect=None)

@@ -830,7 +830,7 @@ def tpcds_exec_standin(ctx, cid, text, sel, dur):
         return sel
     before = cost_ms(pack(sorted(sel), dur), dur)
     after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
-    if before - after < 15000 or not PROBE_BASE.exists():
+    if before - after < 15000 or not PROBE_BASE.exists() or time.time() - T_START > 150:
         return sel
     extra = {"BR_TPCDS_CMP": str(PROBE_BASE)}
     trees = PROBE_BASE.with_name("tpcds_opt_trees.pkl")
@@ -876,7 +876,7 @@ def tpcds_opt_standin(ctx, cid, text, sel, dur):
         return sel
     before = cost_ms(pack(sorted(sel), dur), dur)
     after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
-    if before - after < CPU_FACTOR * 1500:
+    if before - after < CPU_FACTOR * 1500 or time.time() - T_START > 150:
         return sel
     script = "probe_tpcds_opt.py"
     if not PROBE_BASE.exists():
@@ -1244,6 +1244,9 @@ def diag_answers(rows, tests, dur):
 
 
 # ---------------------------------------------------------------- main
+T_START = time.time()
+
+
 def main():
     t0 = time.time()
     real_stdout = os.dup(1)
