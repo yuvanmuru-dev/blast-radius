@@ -27,6 +27,9 @@ class Map:
         self.f = {f: {int(l): i for l, i in v.items()} for f, v in d["f"].items()}
         self.o = d["o"]
         self.r = d.get("r", {})
+        self.ka = d.get("ka", {})
+        self.kw = d.get("kw", {})
+        self.keys_ok = bool(d.get("keys_ok"))
         self.cmp = {}
         cp = os.path.join(os.path.dirname(path), "cmpprof.json.gz")
         if os.path.exists(cp):
@@ -75,6 +78,21 @@ class Map:
 
     def file_tests(self, tf):
         return self.by_file.get(tf, 0)
+
+    def key_reads(self, owner, attr, kds):
+        """Tests that read any of the given entries (or the whole dict)."""
+        self.nonspan = True
+        ent = f"{owner}\t{attr}"
+        bits = 0
+        w = self.kw.get(ent)
+        if w is not None:
+            bits |= self.sets[w]
+        tab = self.ka.get(ent, {})
+        for kd in kds:
+            i = tab.get(kd)
+            if i is not None:
+                bits |= self.sets[i]
+        return bits
 
     def receivers(self, cname):
         self.nonspan = True

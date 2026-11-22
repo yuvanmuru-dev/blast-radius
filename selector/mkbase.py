@@ -11,7 +11,7 @@ out = sys.argv[2] if len(sys.argv) > 2 else str(HERE.parent / "maps" / "fp_base.
 res = []
 for i in range(2):
     ov = verify.build_overlay(src, "/tmp/ov", {})
-    env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1")
+    env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1", BR_FP_COMPARE="all")
     tmp = f"/tmp/fpb{i}.json"
     subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), tmp], cwd=str(ov), env=env, check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

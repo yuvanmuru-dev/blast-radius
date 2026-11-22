@@ -52,6 +52,27 @@ for f, v in opens.items():
     res["o"][f] = intern(v)
 res["r"] = {c: intern(v) for c, v in recv.items()}
 res["ids"] = [t["id"] for t in tests]
+# key-level reads of class dicts (tools/keymap.py), optional
+kraw = os.environ.get("BR_KEY_RAW")
+if kraw and os.path.isdir(kraw):
+    ka, kw, kok = {}, {}, True
+    for t in tests:
+        p = os.path.join(kraw, f"{t['number']}.json")
+        if not os.path.exists(p):
+            kok = False; continue
+        d = json.load(open(p))
+        if d["id"] != t["id"] or not d["ok"]:
+            kok = False
+        bit = 1 << t["number"]
+        for o, a, kd in d["k"]:
+            e = ka.setdefault(f"{o}\t{a}", {})
+            e[kd] = e.get(kd, 0) | bit
+        for o, a in d["w"]:
+            kw[f"{o}\t{a}"] = kw.get(f"{o}\t{a}", 0) | bit
+    res["ka"] = {e: {kd: intern(v) for kd, v in m.items()} for e, m in ka.items()}
+    res["kw"] = {e: intern(v) for e, v in kw.items()}
+    res["keys_ok"] = kok
+    print("keys_ok", kok, "dict attrs", len(ka), file=sys.stderr)
 res["sets"] = sets
 os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
 with gzip.open(out, "wt", compresslevel=9) as g:

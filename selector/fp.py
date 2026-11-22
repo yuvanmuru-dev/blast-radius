@@ -131,6 +131,13 @@ def all_modules(root):
     return mods
 
 
+DICTS = {}
+
+
+def entries(val):
+    return {digest(h(k)): digest(h(v)) for k, v in val.items()}
+
+
 def fingerprint(root, modules, key_order=None):
     """Hash `modules`. Class keys are assigned by walking `key_order` (all
     modules, fixed order) first, so they never depend on which subset we hash."""
@@ -186,6 +193,8 @@ def fingerprint(root, modules, key_order=None):
                 continue
             kind = "F" if isinstance(val, (types.FunctionType, staticmethod, classmethod, property, type)) else "V"
             out[f"{key}.{attr}"] = (cname, digest(h(val)), kind)
+            if type(val) is dict:
+                DICTS[f"{key}.{attr}"] = val
             if isinstance(val, type) and str(getattr(val, "__module__", "")).startswith("sqlglot"):
                 do_class(val, f"{key}.{attr}")
         out[f"{key}.__mro__"] = (cname, digest(",".join(f"{c.__module__}.{c.__qualname__}" for c in cls.__mro__)), "F")
@@ -220,8 +229,19 @@ def main():
     mods = sys.argv[2:] or allm
     fp, failed = fingerprint(root, mods, key_order=allm)
     failed = sorted(set(failed) | set(failed_all))
+    ent = {}
+    basep = os.environ.get("BR_FP_COMPARE")
+    if basep == "all":
+        ent = {k: entries(v) for k, v in DICTS.items()}
+    elif basep:
+        with open(basep) as f:
+            base = json.load(f)["fp"]
+        for k, v in DICTS.items():
+            b = base.get(k)
+            if b is not None and b[1] != fp[k][1]:
+                ent[k] = entries(v)
     with open(outp, "w") as f:
-        json.dump({"fp": fp, "failed": failed}, f)
+        json.dump({"fp": fp, "failed": failed, "entries": ent}, f)
 
 
 if __name__ == "__main__":

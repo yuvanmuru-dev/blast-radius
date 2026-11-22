@@ -5,3 +5,4 @@ sample_labels.json
 __pycache__/
 *.pyc
 maps/importers.json
+key_raw/

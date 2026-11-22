@@ -198,6 +198,7 @@ def select_commit(ctx, text, cid="x"):
 
 
 NARROW_ATTRS = os.environ.get("BR_NARROW", "1") == "1"
+KEYED = os.environ.get("BR_KEYED", "1") == "1"
 FP_ALL = os.environ.get("BR_FP_ALL", "1") == "1"
 FP_BASE = Path(os.environ.get("BR_FPBASE", str(HERE.parent / "maps" / "fp_base.json")))
 _FPB = [None]
@@ -329,7 +330,8 @@ def fingerprint_select(ctx, text, cid):
     ov = verify.build_overlay(SRC, "/tmp/ov", files)
     outp = "/tmp/fp_out.json"
     try:
-        env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1")
+        env = dict(os.environ, PYTHONHASHSEED="0", PYTHONPATH=str(ov), PYTHONDONTWRITEBYTECODE="1",
+                   BR_FP_COMPARE=str(FP_BASE))
         import subprocess
         r = subprocess.run([sys.executable, "-S", str(HERE / "fp.py"), outp] + ([] if FP_ALL else mods), cwd=str(ov), env=env,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
@@ -355,6 +357,9 @@ def fingerprint_select(ctx, text, cid):
             bfp[k] = full[k]
     by_owner = {}
     glob_tokens = set()
+    base_entries = base.get("entries", {})
+    keyed_bits = 0
+    keyed_log = []
     for k in set(bfp) | set(nfp):
         a, b = bfp.get(k), nfp.get(k)
         if a == b:
@@ -365,6 +370,15 @@ def fingerprint_select(ctx, text, cid):
         if owner:
             mod = k.split(":", 1)[0]
             attr = k.rsplit(".", 1)[-1]
+            # dict attribute whose entries we can compare: select by key reads
+            be, ne = base_entries.get(k), new.get("entries", {}).get(k)
+            if KEYED and be is not None and ne is not None and M.keys_ok and not attr.startswith("__"):
+                changed = {x for x in set(be) | set(ne) if be.get(x) != ne.get(x)}
+                kb = M.key_reads(owner, attr, changed)
+                if kb is not None:
+                    keyed_bits |= kb
+                    keyed_log.append((owner.rsplit(".", 1)[-1], attr, len(changed)))
+                    continue
             qual = owner[len(mod) + 1:] if owner.startswith(mod + ".") else owner.rsplit(".", 1)[-1]
             ent = by_owner.setdefault(owner, {"qual": qual, "attrs": set(), "all_values": True})
             ent["attrs"].add(attr)
@@ -372,10 +386,12 @@ def fingerprint_select(ctx, text, cid):
                 ent["all_values"] = False
         else:
             glob_tokens.add((k.split(":", 1)[1],))
-    log(cid, "fp changed", {o: sorted(e["attrs"])[:4] for o, e in list(by_owner.items())[:4]}, sorted(glob_tokens)[:4])
+    log(cid, "fp changed", {o: sorted(e["attrs"])[:4] for o, e in list(by_owner.items())[:4]}, sorted(glob_tokens)[:4],
+        "keyed", keyed_log[:4])
+    bits |= keyed_bits
     if len(by_owner) > 400:
         return ALL
-    if not by_owner and not glob_tokens and not failed:
+    if not by_owner and not glob_tokens and not failed and not keyed_log:
         # a code edit outside functions that changes no import-time state is
         # unexpected unless it only touched docstrings / TYPE_CHECKING / annotations:
         # otherwise do not trust it and fall back to everything touching the file
