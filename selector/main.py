@@ -121,10 +121,19 @@ class Ctx:
             log("no map:", repr(e))
 
 
+NEW_FIXTURE = os.environ.get("BR_NEW_FIXTURE", "1") == "1"
+
+
 def select_file(ctx, fp):
     """Return a set of test numbers, or ALL."""
     if fp.binary or fp.rename or fp.mode_change:
         return ALL
+    if fp.old is None and fp.new is not None and NEW_FIXTURE and fp.new.startswith("tests/fixtures/") \
+            and not fp.new.endswith(".py") and read_src(fp.new) is None:
+        # a brand-new fixture file: no test lists fixture directories, and no
+        # test opens a file that does not exist (they all pass on the pinned
+        # commit), so nothing reads it
+        return set()
     if fp.old is None or fp.new is None or fp.old != fp.new:
         return ALL  # new / deleted / moved file
     path = fp.path
