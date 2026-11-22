@@ -136,6 +136,7 @@ def all_modules(root):
 
 
 DICTS = {}
+SETS = {}  # key -> set/frozenset value (element-level comparison)
 SHALLOW = [False, False]
 VALUES = {}  # key -> value (for shallow / function info on demand)
 
@@ -229,6 +230,8 @@ def fingerprint(root, modules, key_order=None):
             VALUES[f"{key}.{attr}"] = val
             if type(val) is dict:
                 DICTS[f"{key}.{attr}"] = val
+            elif type(val) in (set, frozenset):
+                SETS[f"{key}.{attr}"] = val
             if isinstance(val, type) and str(getattr(val, "__module__", "")).startswith("sqlglot"):
                 do_class(val, f"{key}.{attr}")
         out[f"{key}.__mro__"] = (cname, digest(",".join(f"{c.__module__}.{c.__qualname__}" for c in cls.__mro__)), "F")
@@ -249,6 +252,8 @@ def fingerprint(root, modules, key_order=None):
                 VALUES[key] = val
                 if type(val) is dict:
                     DICTS[key] = val
+                elif type(val) in (set, frozenset):
+                    SETS[key] = val
     return out, failed
 
 
@@ -277,6 +282,18 @@ def main():
             b = base.get(k)
             if b is not None and b[1] != fp[k][1]:
                 ent[k] = entries(v)
+    sent = {}
+    if basep == "all":
+        sent = {k: sorted(digest(h(e)) for e in v) for k, v in SETS.items()}
+    elif basep:
+        for k, v in SETS.items():
+            b = base.get(k)
+            if b is not None and b[1] != fp[k][1]:
+                sent[k] = sorted(digest(h(e)) for e in v)
+    by_id = {}
+    for k, v in SETS.items():
+        by_id.setdefault(id(v), []).append(k)
+    salias = {k: by_id[id(SETS[k])] for k in sent if len(by_id[id(SETS[k])]) > 1}
     extra = {}
     if basep == "all":
         keys = list(VALUES)
@@ -293,7 +310,7 @@ def main():
             sd, anon = shallow(v)
             extra[k] = {"sh": sd, "anon": anon}
     with open(outp, "w") as f:
-        json.dump({"fp": fp, "failed": failed, "entries": ent, "extra": extra}, f)
+        json.dump({"fp": fp, "failed": failed, "entries": ent, "sentries": sent, "salias": salias, "extra": extra}, f)
 
 
 if __name__ == "__main__":

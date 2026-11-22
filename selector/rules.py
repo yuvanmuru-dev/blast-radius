@@ -47,6 +47,8 @@ class Map:
         self.ka = d.get("ka", {})
         self.kw = d.get("kw", {})
         self.keys_ok = bool(d.get("keys_ok"))
+        self.sa = d.get("sa", {})
+        self.sets_ok = bool(d.get("sets_ok"))
         self.idnum = {t["id"]: t["number"] for t in tests} if tests else {}
         self._vprof_path = os.path.join(os.path.dirname(path), "vprof.json.gz")
         self._vprof = False
@@ -120,6 +122,17 @@ class Map:
         if w is not None:
             bits |= self.sets[w]
         tab = self.ka.get(ent, {})
+        for kd in kds:
+            i = tab.get(kd)
+            if i is not None:
+                bits |= self.sets[i]
+        return bits
+
+    def set_reads(self, owner, attr, kds):
+        """Tests that asked whether any of the given elements is in the set."""
+        self.nonspan = True
+        tab = self.sa.get(f"{owner}\t{attr}", {})
+        bits = 0
         for kd in kds:
             i = tab.get(kd)
             if i is not None:

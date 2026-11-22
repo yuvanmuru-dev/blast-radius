@@ -494,6 +494,73 @@ def closure_modules(paths):
     return sorted(seen & known)
 
 
+SETMAP = os.environ.get("BR_SETMAP", "1") == "1"
+_SET_GATE = {}
+
+
+def set_membership_only(attr):
+    """True when every runtime use of the name `attr` anywhere in sqlglot/ and
+    tests/ is the right side of a single `in` / `not in` test (uses at class or
+    module level run at import and are covered by the fingerprint). Any
+    textual occurrence that is not such a code reference (strings, getattr
+    names, comments) makes it False."""
+    if attr in _SET_GATE:
+        return _SET_GATE[attr]
+    ok = True
+    try:
+        hits = source_lines_with([(attr,)])
+        import re
+        word = re.compile(r"\b" + re.escape(attr) + r"\b")
+        for rel, lines in hits.items():
+            text = read_src(rel)
+            tree = ast.parse(text)
+            src_lines = text.splitlines()
+            refs = {}  # line -> count of code references
+            bad = False
+
+            def visit(node, in_func):
+                nonlocal bad
+                for child in ast.iter_child_nodes(node):
+                    f = in_func or isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
+                    is_ref = (isinstance(child, ast.Name) and child.id == attr) or (
+                        isinstance(child, ast.Attribute) and child.attr == attr)
+                    if is_ref:
+                        refs[child.end_lineno] = refs.get(child.end_lineno, 0) + 1
+                        if in_func:
+                            parent = parents.get(id(child))
+                            if not (isinstance(parent, ast.Compare) and len(parent.ops) == 1
+                                    and isinstance(parent.ops[0], (ast.In, ast.NotIn))
+                                    and parent.comparators[0] is child):
+                                bad = True
+                    visit(child, f)
+
+            parents = {}
+            for p in ast.walk(tree):
+                for c in ast.iter_child_nodes(p):
+                    parents[id(c)] = p
+            visit(tree, False)
+            if bad:
+                ok = False
+                break
+            import io
+            import tokenize
+            names = {}
+            for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+                if tok.type == tokenize.NAME and tok.string == attr:
+                    names[tok.start[0]] = names.get(tok.start[0], 0) + 1
+                elif tok.type in (tokenize.STRING, getattr(tokenize, "FSTRING_MIDDLE", -1)) and word.search(tok.string):
+                    ok = False  # named in a string (getattr, eval, ...)
+                    break
+            if ok and sum(names.values()) != sum(refs.values()):
+                ok = False  # a name occurrence that is not a plain reference
+            if not ok:
+                break
+    except Exception:
+        ok = False
+    _SET_GATE[attr] = ok
+    return ok
+
+
 def fingerprint_select(ctx, text, cid):
     """Class/module-level edits: diff the patched import-time state against the
     baseline and select tests that use any changed class or name."""
@@ -570,6 +637,14 @@ def fingerprint_select(ctx, text, cid):
         if owner:
             mod = k.split(":", 1)[0]
             attr = k.rsplit(".", 1)[-1]
+            bs, ns = base.get("sentries", {}).get(k), new.get("sentries", {}).get(k)
+            if SETMAP and bs is not None and ns is not None and M.sets_ok and not attr.startswith("__") \
+                    and all(set_membership_only(a.rsplit(".", 1)[-1].rsplit(":", 1)[-1])
+                            for a in new.get("salias", {}).get(k, [k])):
+                changed = set(bs) ^ set(ns)
+                keyed_bits |= M.set_reads(owner, attr, changed)
+                keyed_log.append(("set", attr, len(changed)))
+                continue
             # dict attribute whose entries we can compare: select by key reads
             be, ne = base_entries.get(k), new.get("entries", {}).get(k)
             if KEYED and be is not None and ne is not None and M.keys_ok and not attr.startswith("__"):
@@ -586,6 +661,14 @@ def fingerprint_select(ctx, text, cid):
                 ent["all_values"] = False
         else:
             mod, gname = k.split(":", 1)
+            bs, ns = base.get("sentries", {}).get(k), new.get("sentries", {}).get(k)
+            if SETMAP and bs is not None and ns is not None and M.sets_ok \
+                    and all(set_membership_only(a.rsplit(".", 1)[-1].rsplit(":", 1)[-1])
+                            for a in new.get("salias", {}).get(k, [k])):
+                changed = set(bs) ^ set(ns)
+                keyed_bits |= M.set_reads("module:" + mod, gname, changed)
+                keyed_log.append(("set", gname, len(changed)))
+                continue
             be, ne = base_entries.get(k), new.get("entries", {}).get(k)
             if KEYED and be is not None and ne is not None and M.keys_ok:
                 changed = {x for x in set(be) | set(ne) if be.get(x) != ne.get(x)}
