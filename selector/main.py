@@ -888,7 +888,7 @@ def maybe_verify(ctx, cid, text, sel, dur, deadline):
     return kept
 
 
-DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4")
+DIAG = os.environ.get("BR_DIAG", "0") in ("1", "2", "3", "4", "5")
 DIAG_MODE = os.environ.get("BR_DIAG", "0")
 DIAG_GROUPS = [
     ("sqlglot/parser.py",), ("sqlglot/generator.py",), ("sqlglot/optimizer/",), ("sqlglot/expressions/",),
@@ -990,6 +990,72 @@ def diag4_answers(rows, tests, dur):
     return _diag_pad(out, base, target, tid, dur)
 
 
+_AST_NAMES = sorted(n for n in dir(ast) if isinstance(getattr(ast, n), type)
+                    and issubclass(getattr(ast, n), ast.AST) and n[0].isupper())
+
+
+def _diag5_code(text):
+    """Text shape of the first .py hunk change (20 bits):
+    bit0 = insertion (no removed line); line-85 (4b) << 1;
+    replacement: common-prefix length (7b) << 5, new char at that spot (7b) << 12,
+                 length change +1 clipped to 0..1 (1b) << 19
+    insertion:   stripped length (7b) << 5, first non-space char (7b) << 12."""
+    for fp in difflib2.parse(text):
+        if not fp.path.endswith(".py"):
+            continue
+        for os_, ol, ns, nl, body in fp.hunks:
+            k = os_ if ol > 0 else os_ + 1
+            rem, add, first = [], [], None
+            for tag, line in body:
+                if tag == " ":
+                    if rem or add:
+                        break
+                    k += 1
+                elif tag == "-":
+                    if first is None:
+                        first = k
+                    rem.append(line)
+                    k += 1
+                else:
+                    if first is None:
+                        first = k
+                    add.append(line)
+            if not rem and not add:
+                continue
+            ln = max(0, min((first or 85) - 85, 15))
+            if not rem:
+                t = add[0].strip()
+                return 1 | (ln << 1) | (min(len(t), 127) << 5) | ((ord(t[0]) & 127 if t else 0) << 12)
+            r, n = rem[0].rstrip("\n"), (add[0].rstrip("\n") if add else "")
+            p = 0
+            while p < len(r) and p < len(n) and r[p] == n[p]:
+                p += 1
+            ch = ord(n[p]) & 127 if p < len(n) else 0
+            return (ln << 1) | (min(p, 127) << 5) | (ch << 12) | ((1 if len(n) > len(r) else 0) << 19)
+    return (1 << 20) - 1
+
+
+def diag5_answers(rows, tests, dur, texts):
+    tid = {t["id"]: t["number"] for t in tests}[DIAG_TEST]
+    want = int(os.environ.get("BR_DIAG_IDX", "1"))
+    out, base, k, code = [], 0, 0, None
+    for cid, nums, *_ in rows:
+        if tid in nums:
+            if k == want and code is None:
+                try:
+                    code = _diag5_code(texts[cid])
+                except Exception as e:
+                    log("DIAG5 error", repr(e))
+                    code = (1 << 20) - 2
+                log("DIAG5", cid, code)
+            k += 1
+        w = pack(nums, dur)
+        out.append([cid, w])
+        base += cost_ms(w, dur)
+    target = 500000 + (code if code is not None else (1 << 20) - 3)
+    return _diag_pad(out, base, target, tid, dur)
+
+
 def _diag_pad(out, base, target, tid, dur):
     need = target - base
     for row in out:
@@ -1064,6 +1130,7 @@ def main():
     os.dup2(2, 1)  # anything stray goes to stderr
     answers = []
     diag_rows = []
+    diag_texts = {}
     tests = json.loads((DATA / "tests.json").read_text())["tests"]
     dur = {t["number"]: round(t["seconds"] * 1000) for t in tests}
     ctx = Ctx(tests)
@@ -1072,6 +1139,8 @@ def main():
         cid = patch.stem
         try:
             text = patch.read_text(encoding="utf-8", errors="replace")
+            if DIAG:
+                diag_texts[cid] = text
             sel = select_commit(ctx, text, cid)
             if sel != ALL and PARTIAL:
                 try:
@@ -1108,7 +1177,9 @@ def main():
         log(cid, "ALL" if sel == ALL else len(nums), "workers", len(workers))
         answers.append(json.dumps({"commit": cid, "workers": workers}))
     if DIAG:
-        answers = {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers}.get(DIAG_MODE, diag_answers)(diag_rows, tests, dur)
+        answers = (lambda r, t, d: diag5_answers(r, t, d, diag_texts)) if DIAG_MODE == "5" else \
+            {"2": diag2_answers, "3": diag3_answers, "4": diag4_answers}.get(DIAG_MODE, diag_answers)
+        answers = answers(diag_rows, tests, dur)
     os.write(real_stdout, ("\n".join(answers) + "\n").encode())
     log("done in", round(time.time() - t0, 3), "s")
 
