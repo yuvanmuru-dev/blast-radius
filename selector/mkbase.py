@@ -30,7 +30,7 @@ Path(out).with_name("importers.json").write_text(json.dumps({k: sorted(v) for k,
 # baselines of the scaled stand-ins for very slow tests, taken in the same
 # overlay layout the runtime uses (run twice, must match)
 pb = {}
-for script in sorted(set(_m.PROBES.values())):
+for script in sorted(set(_m.PROBES.values()) | {"probe_tpcds_opt.py"}):
     outs = []
     for i in range(2):
         ov = verify.build_overlay(src, "/tmp/ov", {})

@@ -314,7 +314,7 @@ def select_commit(ctx, text, cid="x"):
     ctx.diag_files = []
     for fp in files:
         s = select_file(ctx, fp)
-        if DIAG:
+        if True:
             try:
                 rm, an = difflib2.changed_old_lines(fp)
                 cl = sorted(rm) or sorted(x for x in an if x > 0)
@@ -750,14 +750,60 @@ def partial_heavy(ctx, cid, text, sel, dur, deadline):
 
 PROBE = os.environ.get("BR_PROBE", "1") == "1"
 PROBES = {"tests/test_parser.py::TestParser::test_max_nodes": "probe_maxnodes.py"}
+TPCDS_ID = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
+TPCDS_OPT = os.environ.get("BR_TPCDS_OPT", "1") == "1"
+# optimizer modules the planner/executor also call at run time
+OPT_RUNTIME = {"sqlglot/optimizer/scope.py", "sqlglot/optimizer/eliminate_joins.py"}
+
+
+def tpcds_opt_standin(ctx, cid, text, sel, dur):
+    """test_execute_tpcds for commits whose only behavioral change is in
+    optimizer code: identical optimized trees (and DuckDB SQL) for every
+    executed query mean an identical plan, identical execution, identical
+    result. Runs the stand-in on the patched tree, drops the test on a match."""
+    if not TPCDS_OPT or not sel:
+        return sel
+    ids = {x["number"]: x["id"] for x in ctx.tests}
+    tn = next((n for n in sel if ids[n] == TPCDS_ID), None)
+    if tn is None:
+        return sel
+    files = getattr(ctx, "diag_files", [])
+    opt_changed = False
+    for path, s, _ in files:
+        if path.startswith("sqlglot/optimizer/") and path.endswith(".py"):
+            if path in OPT_RUNTIME or path in getattr(ctx, "need_fp", []):
+                return sel
+            opt_changed = True
+            continue
+        if s == ALL or (tn in s) or path in getattr(ctx, "need_fp", []):
+            return sel  # some other change reaches the test by itself
+    if not opt_changed:
+        return sel
+    before = cost_ms(pack(sorted(sel), dur), dur)
+    after = cost_ms(pack(sorted(set(sel) - {tn}), dur), dur)
+    if before - after < CPU_FACTOR * 3800:
+        return sel
+    script = "probe_tpcds_opt.py"
+    if not PROBE_BASE.exists():
+        return sel
+    ov = verify.build_overlay(SRC, "/tmp/ov", patched_files(text))
+    try:
+        out = _probe_out(script, ov, {"BR_TPCDS_CMP": str(PROBE_BASE)})
+    finally:
+        import shutil
+        shutil.rmtree(ov, ignore_errors=True)
+    same = out is not None and out.strip() == '{"same": true}'
+    log(cid, "tpcds-opt standin", "same" if same else "differs", (out or "").strip()[:60])
+    return set(sel) - {tn} if same else sel
 PROBE_BASE = Path(os.environ.get("BR_PROBE_BASE", str(HERE.parent / "maps" / "probe_base.json")))
 _PB = {}
 
 
-def _probe_out(script, root):
+def _probe_out(script, root, extra=None):
     import subprocess
-    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "BR_TPCDS_CMP")}
     env.update(PYTHONHASHSEED="0", PYTHONDONTWRITEBYTECODE="1")
+    env.update(extra or {})
     try:
         r = subprocess.run([sys.executable, "-S", str(HERE / script)], cwd=str(root), env=env,
                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60)
@@ -1012,6 +1058,11 @@ def main():
                     sel = probe_heavy(ctx, cid, text, sel, dur)
                 except Exception as e:
                     log(cid, "probe error", repr(e))
+            if sel != ALL:
+                try:
+                    sel = tpcds_opt_standin(ctx, cid, text, sel, dur)
+                except Exception as e:
+                    log(cid, "tpcds-opt error", repr(e))
             if sel != ALL:
                 try:
                     sel = maybe_verify(ctx, cid, text, sel, dur, deadline)
