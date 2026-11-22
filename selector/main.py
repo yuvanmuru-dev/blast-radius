@@ -343,7 +343,7 @@ _src_index = [None]
 
 def _fp_base():
     if _FPB[0] is None:
-        _FPB[0] = json.loads(FP_BASE.read_text())
+        _FPB[0] = rules.load_cached(FP_BASE)
     return _FPB[0]
 
 
@@ -677,8 +677,16 @@ _UNITS = [None]
 
 def _units():
     if _UNITS[0] is None:
-        import gzip
-        raw = json.load(gzip.open(UNITS_FILE, "rt"))
+        idx_pk = Path(str(UNITS_FILE) + ".idx.pkl")
+        if idx_pk.exists():
+            try:
+                import pickle
+                with open(idx_pk, "rb") as f:
+                    _UNITS[0] = pickle.load(f)
+                return _UNITS[0]
+            except Exception:
+                pass
+        raw = rules.load_cached(UNITS_FILE)
         idx = {}
         for test, units in raw.items():
             m = {}

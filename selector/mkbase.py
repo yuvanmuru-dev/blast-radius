@@ -44,4 +44,20 @@ _m._probe_out("probe_tpcds_exec.py", ov, {"BR_TPCDS_DUMP_OPT": str(Path(out).wit
 import shutil
 shutil.rmtree("/tmp/ov", ignore_errors=True)
 Path(out).with_name("probe_base.json").write_text(json.dumps(pb))
+# pickled copies of the runtime's JSON maps (identical objects, faster to load)
+import pickle
+for name in ("map.json.gz", "cmpprof.json.gz", "units.json.gz", "fp_base.json"):
+    p = Path(out).with_name(name)
+    if p.exists():
+        import gzip as _gz
+        obj = json.load(_gz.open(p, "rt")) if name.endswith(".gz") else json.loads(p.read_text())
+        with open(str(p) + ".pkl", "wb") as f:
+            pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+# the per-query map, already indexed by (file, line)
+_m.UNITS_FILE = Path(out).with_name("units.json.gz")
+_m._UNITS[0] = None
+if _m.UNITS_FILE.exists():
+    idx = _m._units()
+    with open(str(_m.UNITS_FILE) + ".idx.pkl", "wb") as f:
+        pickle.dump(idx, f, protocol=pickle.HIGHEST_PROTOCOL)
 print("fp_base ok:", len(a["fp"]), "keys;", "probes", sorted(pb))

@@ -8,10 +8,27 @@ ALL = "ALL"
 FUNC = (ast.FunctionDef, ast.AsyncFunctionDef)
 
 
+def load_cached(path):
+    """JSON (optionally gzipped) map file, or its pickle made at image build
+    time next to it (same object, loads several times faster)."""
+    import pickle
+    pk = str(path) + ".pkl"
+    if os.path.exists(pk):
+        try:
+            with open(pk, "rb") as f:
+                return pickle.load(f)
+        except Exception:
+            pass
+    if str(path).endswith(".gz"):
+        with gzip.open(path, "rt") as g:
+            return json.load(g)
+    with open(path) as f:
+        return json.load(f)
+
+
 class Map:
     def __init__(self, path, n, tests=()):
-        with gzip.open(path, "rt") as g:
-            d = json.load(g)
+        d = load_cached(path)
         ids = d.get("ids")
         cur = [t["id"] for t in tests] if tests else None
         self.trans = None
@@ -36,8 +53,7 @@ class Map:
         self.cmp = {}
         cp = os.path.join(os.path.dirname(path), "cmpprof.json.gz")
         if os.path.exists(cp):
-            with gzip.open(cp, "rt") as g:
-                self.cmp = {k: set(v.split(",")) for k, v in json.load(g).items()}
+            self.cmp = {k: set(v.split(",")) for k, v in load_cached(cp).items()}
         # tests we cannot vouch for: included whenever a commit does anything
         self.always = 0
         self.by_file = {}
